@@ -56,8 +56,16 @@ export function ToolboxIcon({ type, size }: Props) {
 function makeIconEquipment(type: EquipmentType): CompletionEquipment {
   const base = { id: 'icon', topMD: 0, bottomMD: 1, length: 1, od: 4.5, innerDiameter: 3.826 };
   switch (type) {
+    case 'casing':
+      return { ...base, type, od: 9.625, innerDiameter: 8.681, jointLength: 12.2, casingClass: 'production' };
+    case 'tubing':
+      return { ...base, type, od: 3.5, innerDiameter: 2.992, jointLength: 9.5 };
     case 'blank_pipe':
       return { ...base, type, jointLength: 12.2 };
+    case 'pup_joint':
+      return { ...base, type };
+    case 'constrictor':
+      return { ...base, type, constrictionType: 'mechanical', bodyOD: 4.5, maxOD: 5.875 };
     case 'swell_packer':
       return { ...base, type, swellMedium: 'water', swellTime: 48, maxOD: 5.875, bodyOD: 4.5 };
     case 'sand_screen':

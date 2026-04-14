@@ -118,18 +118,58 @@ export const DEFAULT_WASH_PIPE = {
   washOD: 2.875,
 } as const;
 
+// Outer tubulars (above or replacing blank pipe)
+export const DEFAULT_CASING = {
+  od: 9.625,         // 9-5/8" standard production casing
+  innerDiameter: 8.681,
+  jointLength: DEFAULT_JOINT_LENGTH,
+  grade: 'L-80',
+  weight: 71.1,      // kg/m
+  connectionType: 'BTC',
+  casingClass: 'production' as const,
+} as const;
+
+export const DEFAULT_TUBING = {
+  od: 3.5,           // 3-1/2" production tubing
+  innerDiameter: 2.992,
+  jointLength: 9.5,  // tubing joints are shorter (~30 ft)
+  grade: 'L-80',
+  weight: 13.7,
+  connectionType: 'VAM',
+} as const;
+
+export const DEFAULT_PUP_JOINT = {
+  od: 4.5,
+  innerDiameter: 3.826,
+  grade: 'L-80',
+  weight: 16.6,
+  connectionType: 'VAM TOP',
+} as const;
+
+export const DEFAULT_CONSTRICTOR = {
+  od: 4.5,
+  innerDiameter: 2.5,  // smaller ID provides constriction
+  constrictionType: 'mechanical' as const,
+  bodyOD: 4.5,
+  maxOD: 5.875,
+} as const;
+
 /**
  * Standard physical length per equipment type (meters).
  * When placing equipment, the length is snapped to integer multiples of this value.
  * A value of null means length is variable (user-defined).
  */
 export const STANDARD_LENGTH: Record<EquipmentType, number | null> = {
+  casing: null,                // variable (made of joints but length flexible)
+  tubing: null,                // variable, stacked from 9.5m joints
   blank_pipe: null,            // variable (made of 12.2m joints but length flexible)
+  pup_joint: null,             // variable, typically 1-6 m
   swell_packer: 3.0,           // typical 3m rubber element on a pup joint
+  constrictor: 3.0,            // similar to a packer
   sand_screen: 12.0,           // one screen joint ~12 m
   icd_screen: 12.0,            // one screen joint with ICD nozzles
   aicd_screen: 12.0,           // one AICD screen joint
-  sliding_sleeve: 2.0,         // ~2 m sleeve
+  sliding_sleeve: 12.0,        // sliding-sleeve screen joint ~12 m
   perforation: null,           // variable length perforated interval
   frac_sleeve: 1.5,            // ~1.5 m ball-activated frac port
   centralizer: 0.4,            // ~0.4 m bow-spring centralizer
@@ -141,8 +181,12 @@ export const STANDARD_LENGTH: Record<EquipmentType, number | null> = {
 };
 
 export const EQUIPMENT_COLORS: Record<EquipmentType, string> = {
+  casing: '#334155',
+  tubing: '#0369a1',
   blank_pipe: '#64748b',
+  pup_joint: '#94a3b8',
   swell_packer: '#dc2626',
+  constrictor: '#b91c1c',
   sand_screen: '#2563eb',
   icd_screen: '#0891b2',
   aicd_screen: '#0e7490',
@@ -158,8 +202,12 @@ export const EQUIPMENT_COLORS: Record<EquipmentType, string> = {
 };
 
 export const EQUIPMENT_LABELS: Record<EquipmentType, string> = {
+  casing: 'Casing',
+  tubing: 'Tubing',
   blank_pipe: 'Blank Pipe',
+  pup_joint: 'Pup Joint',
   swell_packer: 'Swell Packer',
+  constrictor: 'Constrictor',
   sand_screen: 'Sand Screen',
   icd_screen: 'ICD Screen',
   aicd_screen: 'AICD Screen',
@@ -175,8 +223,12 @@ export const EQUIPMENT_LABELS: Record<EquipmentType, string> = {
 };
 
 export const EQUIPMENT_SHORT_LABEL: Record<EquipmentType, string> = {
+  casing: 'CSG',
+  tubing: 'TBG',
   blank_pipe: 'BP',
+  pup_joint: 'PUP',
   swell_packer: 'SP',
+  constrictor: 'CON',
   sand_screen: 'SS',
   icd_screen: 'ICD',
   aicd_screen: 'AICD',

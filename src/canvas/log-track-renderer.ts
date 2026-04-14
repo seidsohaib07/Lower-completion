@@ -1,6 +1,7 @@
 import { renderGrid } from './grid-renderer';
 import { valueToTrackPosition, isNullValue } from '../utils/log-processing';
 import { getVisibleRange } from '../utils/depth-utils';
+import { getCanvasTheme } from './render-utils';
 import type { TrackConfig, LogCurve } from '../types';
 
 export function renderLogTrack(
@@ -14,15 +15,16 @@ export function renderLogTrack(
   curve: LogCurve | undefined,
   depthCurve: number[]
 ) {
+  const theme = getCanvasTheme();
   // Background
-  ctx.fillStyle = '#111827';
+  ctx.fillStyle = theme.bg;
   ctx.fillRect(0, 0, width, height);
 
   // Grid
   renderGrid(ctx, width, height, topDepth, bottomDepth, pixelsPerMeter, trackConfig.gridLines);
 
   // Left/right borders
-  ctx.strokeStyle = '#334155';
+  ctx.strokeStyle = theme.border;
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(0.5, 0);

@@ -1,4 +1,4 @@
-import { drawText, drawHorizontalLine } from './render-utils';
+import { drawText, drawHorizontalLine, getCanvasTheme } from './render-utils';
 
 export function renderDepthTrack(
   ctx: CanvasRenderingContext2D,
@@ -6,14 +6,17 @@ export function renderDepthTrack(
   height: number,
   topDepth: number,
   bottomDepth: number,
-  pixelsPerMeter: number
+  pixelsPerMeter: number,
+  depthLabel: string = 'MD',
+  labelFormatter?: (md: number) => number
 ) {
+  const theme = getCanvasTheme();
   // Background
-  ctx.fillStyle = '#0f172a';
+  ctx.fillStyle = theme.bgDeep;
   ctx.fillRect(0, 0, width, height);
 
   // Right border
-  ctx.strokeStyle = '#475569';
+  ctx.strokeStyle = theme.gridMajor;
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(width - 0.5, 0);
@@ -31,12 +34,13 @@ export function renderDepthTrack(
 
     // Tick mark
     const tickLength = isMajor ? 8 : 4;
-    drawHorizontalLine(ctx, y, width - tickLength, width, '#94a3b8', isMajor ? 1 : 0.5);
+    drawHorizontalLine(ctx, y, width - tickLength, width, theme.textMuted, isMajor ? 1 : 0.5);
 
     // Depth label for major ticks
     if (isMajor) {
-      drawText(ctx, depth.toFixed(depth % 1 === 0 ? 0 : 1), width - 12, y, {
-        color: '#e2e8f0',
+      const displayed = labelFormatter ? labelFormatter(depth) : depth;
+      drawText(ctx, displayed.toFixed(displayed % 1 === 0 ? 0 : 1), width - 12, y, {
+        color: theme.textPrimary,
         font: '10px Inter, system-ui, sans-serif',
         align: 'right',
         baseline: 'middle',
@@ -45,14 +49,14 @@ export function renderDepthTrack(
   }
 
   // Header
-  drawText(ctx, 'MD', width / 2, 6, {
-    color: '#94a3b8',
+  drawText(ctx, depthLabel, width / 2, 6, {
+    color: theme.textMuted,
     font: 'bold 9px Inter, system-ui, sans-serif',
     align: 'center',
     baseline: 'top',
   });
   drawText(ctx, '(m)', width / 2, 16, {
-    color: '#64748b',
+    color: theme.textMuted,
     font: '8px Inter, system-ui, sans-serif',
     align: 'center',
     baseline: 'top',

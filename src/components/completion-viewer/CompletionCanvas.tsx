@@ -20,6 +20,8 @@ export function CompletionCanvas() {
   const replaceInterval = useCompletionStore((s) => s.replaceInterval);
   const placeAtDepth = useCompletionStore((s) => s.placeAtDepth);
   const moveEquipment = useCompletionStore((s) => s.moveEquipment);
+  const removeEquipment = useCompletionStore((s) => s.removeEquipment);
+  const duplicateEquipment = useCompletionStore((s) => s.duplicateEquipment);
   const selection = useSelectionStore((s) => s.selection);
   const selectEquipment = useSelectionStore((s) => s.selectEquipment);
   const clearSelection = useSelectionStore((s) => s.clearSelection);
@@ -27,6 +29,19 @@ export function CompletionCanvas() {
   const activeTool = useUIStore((s) => s.activeTool);
   const theme = useUIStore((s) => s.theme);
   const { onMouseDown, onMouseMove, onMouseUp } = useDragSelect();
+
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    equipmentId: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const onDocClick = () => setContextMenu(null);
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [contextMenu]);
 
   // Move-state for dragging a placed equipment item
   const [moveState, setMoveState] = useState<{
@@ -175,22 +190,99 @@ export function CompletionCanvas() {
     [depthAtMouse, placeAtDepth]
   );
 
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      if (!containerRef.current) return;
+      e.preventDefault();
+      const rect = containerRef.current.getBoundingClientRect();
+      const depth = pixelToDepth(e.clientY - rect.top);
+      const hit = hitTestEquipment(items, depth);
+      if (!hit || hit.type === 'blank_pipe') {
+        setContextMenu(null);
+        return;
+      }
+      selectEquipment(hit.id);
+      setContextMenu({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+        equipmentId: hit.id,
+      });
+    },
+    [items, pixelToDepth, selectEquipment]
+  );
+
   const cursor = moveState ? 'grabbing' : activeTool === 'select' ? 'default' : 'crosshair';
 
   return (
     <div
       ref={containerRef}
-      className="flex-1 h-full canvas-container"
+      className="flex-1 h-full canvas-container relative"
       style={{ cursor }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={() => moveState && setMoveState(null)}
+      onContextMenu={handleContextMenu}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       <canvas ref={canvasRef} className="block" />
+      {contextMenu && (
+        <div
+          className="absolute rounded shadow-lg border text-[11px] py-1 z-40"
+          style={{
+            left: contextMenu.x,
+            top: contextMenu.y,
+            background: 'var(--color-surface)',
+            borderColor: 'var(--color-border)',
+            color: 'var(--color-text)',
+            minWidth: 140,
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <button
+            className="block w-full text-left px-3 py-1 hover:bg-[rgba(148,163,184,0.15)]"
+            onClick={() => {
+              duplicateEquipment(contextMenu.equipmentId);
+              setContextMenu(null);
+            }}
+          >
+            Duplicate
+          </button>
+          <button
+            className="block w-full text-left px-3 py-1 hover:bg-[rgba(148,163,184,0.15)]"
+            onClick={() => {
+              // Arming move: select item and let user drag via the existing move handler.
+              selectEquipment(contextMenu.equipmentId);
+              const eq = items.find((i) => i.id === contextMenu.equipmentId);
+              if (eq) {
+                setMoveState({
+                  id: eq.id,
+                  grabOffsetMD: 0,
+                  currentTopMD: eq.topMD,
+                  length: eq.length,
+                });
+              }
+              setContextMenu(null);
+            }}
+          >
+            Move (drag to reposition)
+          </button>
+          <div className="border-t my-0.5" style={{ borderColor: 'var(--color-border)' }} />
+          <button
+            className="block w-full text-left px-3 py-1 hover:bg-[rgba(239,68,68,0.2)]"
+            style={{ color: 'var(--color-danger)' }}
+            onClick={() => {
+              removeEquipment(contextMenu.equipmentId);
+              clearSelection();
+              setContextMenu(null);
+            }}
+          >
+            Remove
+          </button>
+        </div>
+      )}
     </div>
   );
 }

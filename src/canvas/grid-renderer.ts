@@ -1,4 +1,4 @@
-import { drawHorizontalLine, drawVerticalLine } from './render-utils';
+import { drawHorizontalLine, drawVerticalLine, getCanvasTheme } from './render-utils';
 
 export function renderGrid(
   ctx: CanvasRenderingContext2D,
@@ -9,6 +9,7 @@ export function renderGrid(
   pixelsPerMeter: number,
   verticalDivisions: number = 5
 ) {
+  const theme = getCanvasTheme();
   // Horizontal grid lines (depth intervals)
   const depthRange = bottomDepth - topDepth;
   const gridSpacing = calculateGridSpacing(depthRange);
@@ -17,13 +18,13 @@ export function renderGrid(
   for (let depth = firstGridDepth; depth <= bottomDepth; depth += gridSpacing) {
     const y = (depth - topDepth) * pixelsPerMeter;
     const isMajor = Math.abs(depth % (gridSpacing * 5)) < 0.01;
-    drawHorizontalLine(ctx, y, 0, width, isMajor ? '#475569' : '#1e293b', isMajor ? 0.8 : 0.3);
+    drawHorizontalLine(ctx, y, 0, width, isMajor ? theme.gridMajor : theme.gridMinor, isMajor ? 0.8 : 0.3);
   }
 
   // Vertical grid lines (track scale divisions)
   for (let i = 1; i < verticalDivisions; i++) {
     const x = (width * i) / verticalDivisions;
-    drawVerticalLine(ctx, x, 0, height, '#1e293b', 0.3);
+    drawVerticalLine(ctx, x, 0, height, theme.gridMinor, 0.3);
   }
 }
 
