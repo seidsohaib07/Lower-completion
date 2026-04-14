@@ -156,9 +156,8 @@ function SlidingSleeveFields({ item, onUpdate }: { item: SlidingSleeve; onUpdate
           value={item.sleeveType}
           onChange={(e) => onUpdate(item.id, { sleeveType: e.target.value as any })}
         >
-          <option value="ICD">ICD</option>
-          <option value="AICD">AICD</option>
           <option value="manual">Manual</option>
+          <option value="hydraulic">Hydraulic</option>
         </select>
       </div>
       <EditableField label="Nozzles" value={item.nozzleCount ?? 0} unit="" onChange={(v) => onUpdate(item.id, { nozzleCount: v })} />

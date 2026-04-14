@@ -20,19 +20,15 @@ export interface DragState {
   currentDepth?: number;
 }
 
-export type ActiveTool =
-  | 'select'
-  | 'place_blank_pipe'
-  | 'place_swell_packer'
-  | 'place_sand_screen'
-  | 'place_sliding_sleeve';
+export type ActiveTool = 'select' | `place_${EquipmentType}`;
 
 export function toolToEquipmentType(tool: ActiveTool): EquipmentType | null {
-  const map: Record<string, EquipmentType> = {
-    place_blank_pipe: 'blank_pipe',
-    place_swell_packer: 'swell_packer',
-    place_sand_screen: 'sand_screen',
-    place_sliding_sleeve: 'sliding_sleeve',
-  };
-  return map[tool] ?? null;
+  if (tool === 'select') return null;
+  return tool.replace(/^place_/, '') as EquipmentType;
 }
+
+export function equipmentTypeToTool(type: EquipmentType): ActiveTool {
+  return `place_${type}` as ActiveTool;
+}
+
+export type Theme = 'light' | 'dark';

@@ -4,18 +4,34 @@ import type {
   CompletionString,
   CompletionEquipment,
   BlankPipe,
-  SwellPacker,
-  SandScreen,
-  SlidingSleeve,
   EquipmentType,
 } from '../types';
-import { DEFAULT_BLANK_PIPE, DEFAULT_SWELL_PACKER, DEFAULT_SAND_SCREEN, DEFAULT_SLIDING_SLEEVE } from '../constants';
+import {
+  DEFAULT_BLANK_PIPE,
+  DEFAULT_SWELL_PACKER,
+  DEFAULT_SAND_SCREEN,
+  DEFAULT_ICD_SCREEN,
+  DEFAULT_AICD_SCREEN,
+  DEFAULT_SLIDING_SLEEVE,
+  DEFAULT_PERFORATION,
+  DEFAULT_FRAC_SLEEVE,
+  DEFAULT_CENTRALIZER,
+  DEFAULT_PRODUCTION_PACKER,
+  DEFAULT_LINER_HANGER,
+  DEFAULT_FLOAT_SHOE,
+  DEFAULT_FLOAT_COLLAR,
+  DEFAULT_WASH_PIPE,
+  STANDARD_LENGTH,
+  snapLengthToStandard,
+} from '../constants';
 
 interface CompletionState {
   completionString: CompletionString;
 
   initializeBlankPipe: (topMD: number, bottomMD: number, jointLength?: number) => void;
   replaceInterval: (topMD: number, bottomMD: number, equipmentType: EquipmentType) => void;
+  placeAtDepth: (centerMD: number, equipmentType: EquipmentType, lengthOverride?: number) => void;
+  moveEquipment: (id: string, newTopMD: number) => void;
   removeEquipment: (id: string) => void;
   updateEquipment: (id: string, updates: Partial<CompletionEquipment>) => void;
   getItemAtDepth: (md: number) => CompletionEquipment | undefined;
@@ -39,54 +55,185 @@ function createBlankPipe(topMD: number, bottomMD: number, jointLength?: number):
 }
 
 function createEquipment(type: EquipmentType, topMD: number, bottomMD: number): CompletionEquipment {
-  const base = {
-    id: uuidv4(),
-    topMD,
-    bottomMD,
-    length: bottomMD - topMD,
-  };
+  const id = uuidv4();
+  const length = bottomMD - topMD;
 
   switch (type) {
-    case 'swell_packer': {
-      const length = Math.max(bottomMD - topMD, DEFAULT_SWELL_PACKER.length);
+    case 'blank_pipe':
+      return createBlankPipe(topMD, bottomMD);
+    case 'swell_packer':
       return {
-        ...base,
-        type: 'swell_packer',
-        bottomMD: topMD + length,
-        length,
+        id, type, topMD, bottomMD, length,
         od: DEFAULT_SWELL_PACKER.od,
         innerDiameter: DEFAULT_SWELL_PACKER.innerDiameter,
         swellMedium: DEFAULT_SWELL_PACKER.swellMedium,
         swellTime: DEFAULT_SWELL_PACKER.swellTime,
         maxOD: DEFAULT_SWELL_PACKER.maxOD,
         bodyOD: DEFAULT_SWELL_PACKER.bodyOD,
-      } as SwellPacker;
-    }
+      };
     case 'sand_screen':
       return {
-        ...base,
-        type: 'sand_screen',
+        id, type, topMD, bottomMD, length,
         od: DEFAULT_SAND_SCREEN.od,
         innerDiameter: DEFAULT_SAND_SCREEN.innerDiameter,
         meshSize: DEFAULT_SAND_SCREEN.meshSize,
         screenType: DEFAULT_SAND_SCREEN.screenType,
         gaugeOD: DEFAULT_SAND_SCREEN.gaugeOD,
-      } as SandScreen;
+      };
+    case 'icd_screen':
+      return {
+        id, type, topMD, bottomMD, length,
+        od: DEFAULT_ICD_SCREEN.od,
+        innerDiameter: DEFAULT_ICD_SCREEN.innerDiameter,
+        meshSize: DEFAULT_ICD_SCREEN.meshSize,
+        screenType: DEFAULT_ICD_SCREEN.screenType,
+        gaugeOD: DEFAULT_ICD_SCREEN.gaugeOD,
+        nozzleCount: DEFAULT_ICD_SCREEN.nozzleCount,
+        nozzleSize: DEFAULT_ICD_SCREEN.nozzleSize,
+        flowArea: DEFAULT_ICD_SCREEN.flowArea,
+      };
+    case 'aicd_screen':
+      return {
+        id, type, topMD, bottomMD, length,
+        od: DEFAULT_AICD_SCREEN.od,
+        innerDiameter: DEFAULT_AICD_SCREEN.innerDiameter,
+        meshSize: DEFAULT_AICD_SCREEN.meshSize,
+        screenType: DEFAULT_AICD_SCREEN.screenType,
+        gaugeOD: DEFAULT_AICD_SCREEN.gaugeOD,
+        nozzleCount: DEFAULT_AICD_SCREEN.nozzleCount,
+        nozzleSize: DEFAULT_AICD_SCREEN.nozzleSize,
+        autonomousRating: DEFAULT_AICD_SCREEN.autonomousRating,
+      };
     case 'sliding_sleeve':
       return {
-        ...base,
-        type: 'sliding_sleeve',
+        id, type, topMD, bottomMD, length,
         od: DEFAULT_SLIDING_SLEEVE.od,
         innerDiameter: DEFAULT_SLIDING_SLEEVE.innerDiameter,
         sleeveType: DEFAULT_SLIDING_SLEEVE.sleeveType,
         nozzleCount: DEFAULT_SLIDING_SLEEVE.nozzleCount,
         nozzleSize: DEFAULT_SLIDING_SLEEVE.nozzleSize,
-        flowArea: DEFAULT_SLIDING_SLEEVE.flowArea,
         position: DEFAULT_SLIDING_SLEEVE.position,
-      } as SlidingSleeve;
-    default:
-      return createBlankPipe(topMD, bottomMD);
+      };
+    case 'perforation':
+      return {
+        id, type, topMD, bottomMD, length,
+        od: DEFAULT_PERFORATION.od,
+        innerDiameter: DEFAULT_PERFORATION.innerDiameter,
+        shotDensity: DEFAULT_PERFORATION.shotDensity,
+        phasing: DEFAULT_PERFORATION.phasing,
+        chargeSize: DEFAULT_PERFORATION.chargeSize,
+        penetration: DEFAULT_PERFORATION.penetration,
+      };
+    case 'frac_sleeve':
+      return {
+        id, type, topMD, bottomMD, length,
+        od: DEFAULT_FRAC_SLEEVE.od,
+        innerDiameter: DEFAULT_FRAC_SLEEVE.innerDiameter,
+        ballSize: DEFAULT_FRAC_SLEEVE.ballSize,
+        portArea: DEFAULT_FRAC_SLEEVE.portArea,
+      };
+    case 'centralizer':
+      return {
+        id, type, topMD, bottomMD, length,
+        od: DEFAULT_CENTRALIZER.od,
+        innerDiameter: DEFAULT_CENTRALIZER.innerDiameter,
+        centralizerType: DEFAULT_CENTRALIZER.centralizerType,
+        maxOD: DEFAULT_CENTRALIZER.maxOD,
+      };
+    case 'production_packer':
+      return {
+        id, type, topMD, bottomMD, length,
+        od: DEFAULT_PRODUCTION_PACKER.od,
+        innerDiameter: DEFAULT_PRODUCTION_PACKER.innerDiameter,
+        packerType: DEFAULT_PRODUCTION_PACKER.packerType,
+        maxOD: DEFAULT_PRODUCTION_PACKER.maxOD,
+        setPressure: DEFAULT_PRODUCTION_PACKER.setPressure,
+      };
+    case 'liner_hanger':
+      return {
+        id, type, topMD, bottomMD, length,
+        od: DEFAULT_LINER_HANGER.od,
+        innerDiameter: DEFAULT_LINER_HANGER.innerDiameter,
+        hangerType: DEFAULT_LINER_HANGER.hangerType,
+        maxOD: DEFAULT_LINER_HANGER.maxOD,
+      };
+    case 'float_shoe':
+      return {
+        id, type, topMD, bottomMD, length,
+        od: DEFAULT_FLOAT_SHOE.od,
+        innerDiameter: DEFAULT_FLOAT_SHOE.innerDiameter,
+        shoeType: DEFAULT_FLOAT_SHOE.shoeType,
+      };
+    case 'float_collar':
+      return {
+        id, type, topMD, bottomMD, length,
+        od: DEFAULT_FLOAT_COLLAR.od,
+        innerDiameter: DEFAULT_FLOAT_COLLAR.innerDiameter,
+        valveType: DEFAULT_FLOAT_COLLAR.valveType,
+      };
+    case 'wash_pipe':
+      return {
+        id, type, topMD, bottomMD, length,
+        od: DEFAULT_WASH_PIPE.od,
+        innerDiameter: DEFAULT_WASH_PIPE.innerDiameter,
+        washOD: DEFAULT_WASH_PIPE.washOD,
+      };
   }
+}
+
+// Split overlapping items: keep portions outside [topMD, bottomMD], drop portions inside.
+function splitAroundInterval(
+  items: CompletionEquipment[],
+  topMD: number,
+  bottomMD: number
+): CompletionEquipment[] {
+  const out: CompletionEquipment[] = [];
+  for (const item of items) {
+    if (item.bottomMD <= topMD || item.topMD >= bottomMD) {
+      out.push(item);
+      continue;
+    }
+    // Keep portion above
+    if (item.topMD < topMD) {
+      if (item.type === 'blank_pipe') {
+        out.push(createBlankPipe(item.topMD, topMD, (item as BlankPipe).jointLength));
+      } else {
+        out.push({ ...item, id: uuidv4(), bottomMD: topMD, length: topMD - item.topMD });
+      }
+    }
+    // Keep portion below
+    if (item.bottomMD > bottomMD) {
+      if (item.type === 'blank_pipe') {
+        out.push(createBlankPipe(bottomMD, item.bottomMD, (item as BlankPipe).jointLength));
+      } else {
+        out.push({ ...item, id: uuidv4(), topMD: bottomMD, length: item.bottomMD - bottomMD });
+      }
+    }
+  }
+  return out;
+}
+
+function mergeAdjacentBlankPipes(items: CompletionEquipment[]): CompletionEquipment[] {
+  const sorted = [...items].sort((a, b) => a.topMD - b.topMD);
+  const merged: CompletionEquipment[] = [];
+  for (const curr of sorted) {
+    const prev = merged[merged.length - 1];
+    if (
+      prev &&
+      prev.type === 'blank_pipe' &&
+      curr.type === 'blank_pipe' &&
+      Math.abs(prev.bottomMD - curr.topMD) < 0.01
+    ) {
+      merged[merged.length - 1] = createBlankPipe(
+        prev.topMD,
+        curr.bottomMD,
+        (prev as BlankPipe).jointLength
+      );
+    } else {
+      merged.push(curr);
+    }
+  }
+  return merged;
 }
 
 export const useCompletionStore = create<CompletionState>((set, get) => ({
@@ -111,54 +258,60 @@ export const useCompletionStore = create<CompletionState>((set, get) => ({
 
   replaceInterval: (topMD, bottomMD, equipmentType) => {
     const { completionString } = get();
-    const newItems: CompletionEquipment[] = [];
+    // Snap length to standard for fixed-length equipment, anchored at topMD
+    const requested = bottomMD - topMD;
+    const finalLength = snapLengthToStandard(equipmentType, requested);
+    const finalBottom = topMD + finalLength;
 
-    for (const item of completionString.items) {
-      // Item is entirely before the replacement interval
-      if (item.bottomMD <= topMD) {
-        newItems.push(item);
-        continue;
-      }
-      // Item is entirely after the replacement interval
-      if (item.topMD >= bottomMD) {
-        newItems.push(item);
-        continue;
-      }
+    const kept = splitAroundInterval(completionString.items, topMD, finalBottom);
+    kept.push(createEquipment(equipmentType, topMD, finalBottom));
+    kept.sort((a, b) => a.topMD - b.topMD);
 
-      // Item overlaps with the replacement interval - split it
-      // Keep portion above the replacement
-      if (item.topMD < topMD) {
-        if (item.type === 'blank_pipe') {
-          newItems.push(createBlankPipe(item.topMD, topMD, (item as BlankPipe).jointLength));
-        } else {
-          // Non-blank equipment: keep as is but truncate
-          newItems.push({ ...item, id: uuidv4(), bottomMD: topMD, length: topMD - item.topMD });
-        }
-      }
+    set({ completionString: { ...completionString, items: kept } });
+  },
 
-      // Keep portion below the replacement
-      if (item.bottomMD > bottomMD) {
-        if (item.type === 'blank_pipe') {
-          newItems.push(createBlankPipe(bottomMD, item.bottomMD, (item as BlankPipe).jointLength));
-        } else {
-          newItems.push({ ...item, id: uuidv4(), topMD: bottomMD, length: item.bottomMD - bottomMD });
-        }
-      }
-    }
+  placeAtDepth: (centerMD, equipmentType, lengthOverride) => {
+    const { completionString } = get();
+    const std = STANDARD_LENGTH[equipmentType];
+    const length =
+      lengthOverride ?? (std != null ? std : 5.0); // variable types default to 5m when drop-placed
+    const topMD = centerMD - length / 2;
+    const bottomMD = topMD + length;
 
-    // Insert the new equipment
-    const newEquipment = createEquipment(equipmentType, topMD, bottomMD);
-    newItems.push(newEquipment);
+    const kept = splitAroundInterval(completionString.items, topMD, bottomMD);
+    kept.push(createEquipment(equipmentType, topMD, bottomMD));
+    kept.sort((a, b) => a.topMD - b.topMD);
 
-    // Sort by topMD
-    newItems.sort((a, b) => a.topMD - b.topMD);
+    set({ completionString: { ...completionString, items: kept } });
+  },
 
-    set({
-      completionString: {
-        ...completionString,
-        items: newItems,
-      },
-    });
+  moveEquipment: (id, newTopMD) => {
+    const { completionString } = get();
+    const target = completionString.items.find((i) => i.id === id);
+    if (!target || target.type === 'blank_pipe') return;
+
+    const length = target.length;
+    const newBottomMD = newTopMD + length;
+
+    // Remove the equipment from its old location (replace with blank pipe)
+    const withoutTarget = completionString.items
+      .filter((i) => i.id !== id)
+      .concat(createBlankPipe(target.topMD, target.bottomMD));
+
+    // Split around new location
+    const kept = splitAroundInterval(withoutTarget, newTopMD, newBottomMD);
+
+    // Create moved copy (preserve type-specific fields)
+    const moved: CompletionEquipment = {
+      ...target,
+      topMD: newTopMD,
+      bottomMD: newBottomMD,
+      length,
+    } as CompletionEquipment;
+    kept.push(moved);
+
+    const merged = mergeAdjacentBlankPipes(kept);
+    set({ completionString: { ...completionString, items: merged } });
   },
 
   removeEquipment: (id) => {
@@ -166,29 +319,11 @@ export const useCompletionStore = create<CompletionState>((set, get) => ({
     const item = completionString.items.find((i) => i.id === id);
     if (!item || item.type === 'blank_pipe') return;
 
-    // Replace with blank pipe
-    const newItems = completionString.items.filter((i) => i.id !== id);
-    newItems.push(createBlankPipe(item.topMD, item.bottomMD));
+    const filtered = completionString.items.filter((i) => i.id !== id);
+    filtered.push(createBlankPipe(item.topMD, item.bottomMD));
+    const merged = mergeAdjacentBlankPipes(filtered);
 
-    // Merge adjacent blank pipes
-    newItems.sort((a, b) => a.topMD - b.topMD);
-    const merged: CompletionEquipment[] = [];
-    for (const curr of newItems) {
-      const prev = merged[merged.length - 1];
-      if (prev && prev.type === 'blank_pipe' && curr.type === 'blank_pipe' && Math.abs(prev.bottomMD - curr.topMD) < 0.01) {
-        // Merge
-        merged[merged.length - 1] = createBlankPipe(prev.topMD, curr.bottomMD, (prev as BlankPipe).jointLength);
-      } else {
-        merged.push(curr);
-      }
-    }
-
-    set({
-      completionString: {
-        ...completionString,
-        items: merged,
-      },
-    });
+    set({ completionString: { ...completionString, items: merged } });
   },
 
   updateEquipment: (id, updates) => {
@@ -196,7 +331,6 @@ export const useCompletionStore = create<CompletionState>((set, get) => ({
     const newItems = completionString.items.map((item): CompletionEquipment => {
       if (item.id !== id) return item;
       const updated = Object.assign({}, item, updates) as CompletionEquipment;
-      // Recalculate length if depths changed
       if (updates.topMD !== undefined || updates.bottomMD !== undefined) {
         updated.length = updated.bottomMD - updated.topMD;
       }

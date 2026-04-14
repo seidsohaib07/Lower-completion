@@ -4,7 +4,10 @@ import { MainLayout } from './components/layout/MainLayout';
 
 function App() {
   return (
-    <div className="flex flex-col h-full w-full bg-[#1a1a2e]">
+    <div
+      className="flex flex-col h-full w-full"
+      style={{ background: 'var(--color-surface)' }}
+    >
       <AppHeader />
       <MainToolbar />
       <MainLayout />

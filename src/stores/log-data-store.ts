@@ -3,12 +3,22 @@ import { v4 as uuidv4 } from 'uuid';
 import type { LogDataSet, TrackConfig } from '../types';
 import { createDefaultTrackConfig } from '../constants';
 
+export interface PdfOverlay {
+  imageDataUrl: string;
+  topMD: number;
+  bottomMD: number;
+  widthPx: number;
+  heightPx: number;
+}
+
 interface LogDataState {
   logData: LogDataSet | null;
   tracks: TrackConfig[];
+  pdfOverlay: PdfOverlay | null;
 
   setLogData: (data: LogDataSet) => void;
   clearLogData: () => void;
+  setPdfOverlay: (overlay: PdfOverlay | null) => void;
   addTrack: (curveName: string) => void;
   removeTrack: (id: string) => void;
   updateTrack: (id: string, updates: Partial<TrackConfig>) => void;
@@ -19,6 +29,7 @@ interface LogDataState {
 export const useLogDataStore = create<LogDataState>((set, get) => ({
   logData: null,
   tracks: [],
+  pdfOverlay: null,
 
   setLogData: (data) => {
     set({ logData: data });
@@ -27,8 +38,10 @@ export const useLogDataStore = create<LogDataState>((set, get) => ({
   },
 
   clearLogData: () => {
-    set({ logData: null, tracks: [] });
+    set({ logData: null, tracks: [], pdfOverlay: null });
   },
+
+  setPdfOverlay: (overlay) => set({ pdfOverlay: overlay }),
 
   addTrack: (curveName) => {
     const id = uuidv4();
