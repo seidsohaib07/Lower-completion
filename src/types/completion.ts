@@ -2,7 +2,17 @@ export type EquipmentType =
   | 'blank_pipe'
   | 'swell_packer'
   | 'sand_screen'
-  | 'sliding_sleeve';
+  | 'icd_screen'
+  | 'aicd_screen'
+  | 'sliding_sleeve'
+  | 'perforation'
+  | 'frac_sleeve'
+  | 'centralizer'
+  | 'production_packer'
+  | 'liner_hanger'
+  | 'float_shoe'
+  | 'float_collar'
+  | 'wash_pipe';
 
 export interface EquipmentBase {
   id: string;
@@ -38,21 +48,98 @@ export interface SandScreen extends EquipmentBase {
   gaugeOD: number;       // gauge ring OD (inches)
 }
 
+export interface ICDScreen extends EquipmentBase {
+  type: 'icd_screen';
+  meshSize: number;
+  screenType: 'wire_wrapped' | 'premium_mesh' | 'sintered';
+  gaugeOD: number;
+  nozzleCount: number;
+  nozzleSize: number; // mm
+  flowArea: number;   // mm^2
+}
+
+export interface AICDScreen extends EquipmentBase {
+  type: 'aicd_screen';
+  meshSize: number;
+  screenType: 'wire_wrapped' | 'premium_mesh' | 'sintered';
+  gaugeOD: number;
+  nozzleCount: number;
+  nozzleSize: number;
+  autonomousRating: number; // bar
+}
+
 export interface SlidingSleeve extends EquipmentBase {
   type: 'sliding_sleeve';
-  sleeveType: 'ICD' | 'AICD' | 'manual';
+  sleeveType: 'manual' | 'hydraulic';
   nozzleCount?: number;
-  nozzleSize?: number;    // mm
-  flowArea?: number;      // mm^2
-  autonomousRating?: number; // bar (for AICD)
+  nozzleSize?: number;
   position: 'open' | 'closed';
+}
+
+export interface Perforation extends EquipmentBase {
+  type: 'perforation';
+  shotDensity: number;   // SPF (shots per foot)
+  phasing: number;       // degrees (e.g., 60)
+  chargeSize: number;    // grams
+  penetration?: number;  // inches into formation
+}
+
+export interface FracSleeve extends EquipmentBase {
+  type: 'frac_sleeve';
+  ballSize: number;      // inches
+  portArea: number;      // in^2
+  stage?: number;
+}
+
+export interface Centralizer extends EquipmentBase {
+  type: 'centralizer';
+  centralizerType: 'rigid' | 'bow_spring' | 'semi_rigid';
+  maxOD: number; // inches (standoff OD)
+}
+
+export interface ProductionPacker extends EquipmentBase {
+  type: 'production_packer';
+  packerType: 'permanent' | 'retrievable' | 'hydraulic_set';
+  maxOD: number;
+  setPressure?: number; // psi
+}
+
+export interface LinerHanger extends EquipmentBase {
+  type: 'liner_hanger';
+  hangerType: 'mechanical' | 'hydraulic' | 'expandable';
+  maxOD: number;
+}
+
+export interface FloatShoe extends EquipmentBase {
+  type: 'float_shoe';
+  shoeType: 'guide' | 'float' | 'eccentric';
+}
+
+export interface FloatCollar extends EquipmentBase {
+  type: 'float_collar';
+  valveType: 'single' | 'double' | 'auto_fill';
+}
+
+export interface WashPipe extends EquipmentBase {
+  type: 'wash_pipe';
+  washOD: number; // inches, runs inside screen
 }
 
 export type CompletionEquipment =
   | BlankPipe
   | SwellPacker
   | SandScreen
-  | SlidingSleeve;
+  | ICDScreen
+  | AICDScreen
+  | SlidingSleeve
+  | Perforation
+  | FracSleeve
+  | Centralizer
+  | ProductionPacker
+  | LinerHanger
+  | FloatShoe
+  | FloatCollar
+  | WashPipe;
 
 export interface CompletionString {
   wellName: string;

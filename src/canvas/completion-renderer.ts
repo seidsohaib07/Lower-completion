@@ -12,10 +12,11 @@ export function renderCompletionSchematic(
   pixelsPerMeter: number,
   items: CompletionEquipment[],
   selectedId: string | null,
-  _openHoleDiameter: number = DEFAULT_OPEN_HOLE_DIAMETER
+  _openHoleDiameter: number = DEFAULT_OPEN_HOLE_DIAMETER,
+  theme: 'light' | 'dark' = 'dark'
 ) {
-  // Background
-  ctx.fillStyle = '#111827';
+  const bg = theme === 'dark' ? '#111827' : '#f8fafc';
+  ctx.fillStyle = bg;
   ctx.fillRect(0, 0, width, height);
 
   const centerX = width * 0.45;
@@ -23,35 +24,34 @@ export function renderCompletionSchematic(
   const pipeWidth = wellboreWidth * 0.55;
   const halfWellbore = wellboreWidth / 2;
 
-  // Draw open hole walls
-  drawOpenHoleWalls(ctx, centerX, halfWellbore, height);
+  drawOpenHoleWalls(ctx, centerX, halfWellbore, height, theme);
+  drawDepthGrid(ctx, width, height, topDepth, bottomDepth, pixelsPerMeter, theme);
 
-  // Draw depth grid lines
-  drawDepthGrid(ctx, width, height, topDepth, bottomDepth, pixelsPerMeter);
-
-  // Draw equipment items
   for (const item of items) {
     const yTop = (item.topMD - topDepth) * pixelsPerMeter;
     const yBottom = (item.bottomMD - topDepth) * pixelsPerMeter;
-
-    // Skip items outside visible range
     if (yBottom < -50 || yTop > height + 50) continue;
 
     const isSelected = item.id === selectedId;
     const drawer = SHAPE_DRAWERS[item.type];
     if (drawer) {
-      drawer(ctx, centerX, yTop, yBottom, wellboreWidth, pipeWidth, isSelected, item);
+      drawer({ ctx, centerX, yTop, yBottom, wellboreWidth, pipeWidth, isSelected, equipment: item });
     }
 
-    // Depth labels on the right side
-    drawDepthLabel(ctx, centerX + halfWellbore + 10, yTop, item.topMD, item.type);
+    drawDepthLabel(ctx, centerX + halfWellbore + 10, yTop, item.topMD, theme);
     if (item.type !== 'blank_pipe' || yBottom - yTop > 30) {
-      drawDepthLabel(ctx, centerX + halfWellbore + 10, yBottom, item.bottomMD, item.type);
+      drawDepthLabel(ctx, centerX + halfWellbore + 10, yBottom, item.bottomMD, theme);
     }
-
-    // Equipment type label for non-blank items
     if (item.type !== 'blank_pipe') {
-      drawDashedLine(ctx, centerX + halfWellbore + 5, yTop, centerX + halfWellbore + 5, yBottom, EQUIPMENT_COLORS[item.type], [3, 3]);
+      drawDashedLine(
+        ctx,
+        centerX + halfWellbore + 5,
+        yTop,
+        centerX + halfWellbore + 5,
+        yBottom,
+        EQUIPMENT_COLORS[item.type],
+        [3, 3]
+      );
     }
   }
 }
@@ -60,10 +60,13 @@ function drawOpenHoleWalls(
   ctx: CanvasRenderingContext2D,
   centerX: number,
   halfWellbore: number,
-  height: number
+  height: number,
+  theme: 'light' | 'dark'
 ) {
-  // Wavy open hole wall texture
-  ctx.strokeStyle = '#78716c';
+  const wallColor = theme === 'dark' ? '#78716c' : '#a8a29e';
+  const fillColor = theme === 'dark' ? 'rgba(120, 113, 108, 0.05)' : 'rgba(120, 113, 108, 0.08)';
+
+  ctx.strokeStyle = wallColor;
   ctx.lineWidth = 2;
 
   // Left wall
@@ -86,8 +89,7 @@ function drawOpenHoleWalls(
   }
   ctx.stroke();
 
-  // Formation fill (subtle texture between wall and edge)
-  ctx.fillStyle = 'rgba(120, 113, 108, 0.05)';
+  ctx.fillStyle = fillColor;
   ctx.fillRect(0, 0, centerX - halfWellbore - 3, height);
   ctx.fillRect(centerX + halfWellbore + 3, 0, centerX - halfWellbore, height);
 }
@@ -98,7 +100,8 @@ function drawDepthGrid(
   _height: number,
   topDepth: number,
   bottomDepth: number,
-  pixelsPerMeter: number
+  pixelsPerMeter: number,
+  theme: 'light' | 'dark'
 ) {
   const depthRange = bottomDepth - topDepth;
   const niceIntervals = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500];
@@ -110,10 +113,11 @@ function drawDepthGrid(
     }
   }
 
+  const gridColor = theme === 'dark' ? '#1e293b' : '#e2e8f0';
   const firstDepth = Math.ceil(topDepth / gridSpacing) * gridSpacing;
   for (let depth = firstDepth; depth <= bottomDepth; depth += gridSpacing) {
     const y = (depth - topDepth) * pixelsPerMeter;
-    drawHorizontalLine(ctx, y, 0, width, '#1e293b', 0.3);
+    drawHorizontalLine(ctx, y, 0, width, gridColor, 0.3);
   }
 }
 
@@ -122,10 +126,11 @@ function drawDepthLabel(
   x: number,
   y: number,
   depth: number,
-  _type: string
+  theme: 'light' | 'dark'
 ) {
+  const color = theme === 'dark' ? '#94a3b8' : '#475569';
   drawText(ctx, depth.toFixed(1), x, y, {
-    color: '#94a3b8',
+    color,
     font: '9px Inter, system-ui, sans-serif',
     align: 'left',
     baseline: 'middle',
