@@ -11,6 +11,8 @@ import type {
   LinerHanger,
   FloatShoe,
   FloatCollar,
+  Constrictor,
+  Casing,
   EquipmentType,
 } from '../types';
 import { EQUIPMENT_COLORS } from '../constants';
@@ -95,6 +97,135 @@ function gradientVertical(
 }
 
 // --- Equipment drawers -----------------------------------------------------
+
+function drawCasing(s: ShapeContext) {
+  const { ctx, centerX, yTop, yBottom, pipeWidth, isSelected, equipment } = s;
+  const base = EQUIPMENT_COLORS.casing;
+  const color = pipeColor(isSelected, base);
+  const casing = equipment as Casing;
+  // Casing is usually wider than pipe - draw thicker walls
+  const width = pipeWidth * 1.6;
+  const halfW = width / 2;
+  ctx.fillStyle = color;
+  ctx.fillRect(centerX - halfW, yTop, 3.5, yBottom - yTop);
+  ctx.fillRect(centerX + halfW - 3.5, yTop, 3.5, yBottom - yTop);
+  // Bore
+  ctx.fillStyle = hex(color, 0.08);
+  ctx.fillRect(centerX - halfW + 3.5, yTop, width - 7, yBottom - yTop);
+
+  // Joint collars
+  if (yBottom - yTop > 40) {
+    const step = Math.max(20, (yBottom - yTop) / 4);
+    ctx.fillStyle = color;
+    for (let y = yTop + step; y < yBottom; y += step) {
+      ctx.fillRect(centerX - halfW - 2, y - 1.5, width + 4, 3);
+    }
+  }
+
+  if (yBottom - yTop > 18) {
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 8px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const cls = (casing.casingClass ?? 'production').slice(0, 3).toUpperCase();
+    ctx.fillText(cls, centerX, yTop + (yBottom - yTop) / 2);
+  }
+}
+
+function drawTubing(s: ShapeContext) {
+  const { ctx, centerX, yTop, yBottom, pipeWidth, isSelected } = s;
+  const base = EQUIPMENT_COLORS.tubing;
+  const color = pipeColor(isSelected, base);
+  // Tubing narrower than casing / blank pipe
+  const width = pipeWidth * 0.75;
+  const halfW = width / 2;
+  ctx.fillStyle = color;
+  ctx.fillRect(centerX - halfW, yTop, 2, yBottom - yTop);
+  ctx.fillRect(centerX + halfW - 2, yTop, 2, yBottom - yTop);
+  ctx.fillStyle = hex(color, 0.12);
+  ctx.fillRect(centerX - halfW + 2, yTop, width - 4, yBottom - yTop);
+
+  // Tubing joint collars every ~9.5m (tighter spacing)
+  if (yBottom - yTop > 30) {
+    const step = Math.max(14, (yBottom - yTop) / 6);
+    ctx.strokeStyle = hex(color, 0.55);
+    ctx.lineWidth = 1;
+    for (let y = yTop + step; y < yBottom; y += step) {
+      ctx.beginPath();
+      ctx.moveTo(centerX - halfW - 3, y);
+      ctx.lineTo(centerX + halfW + 3, y);
+      ctx.stroke();
+    }
+  }
+}
+
+function drawPupJoint(s: ShapeContext) {
+  const { ctx, centerX, yTop, yBottom, pipeWidth, isSelected } = s;
+  const base = EQUIPMENT_COLORS.pup_joint;
+  const color = pipeColor(isSelected, base);
+  drawInnerPipeBore(ctx, centerX, yTop, yBottom, pipeWidth, color);
+  // Dotted outer border to differentiate from blank pipe
+  ctx.strokeStyle = hex(color, 0.6);
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 2]);
+  const halfPipe = pipeWidth / 2;
+  ctx.strokeRect(centerX - halfPipe, yTop, pipeWidth, yBottom - yTop);
+  ctx.setLineDash([]);
+
+  if (yBottom - yTop > 14) {
+    ctx.fillStyle = color;
+    ctx.font = 'bold 7px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('PUP', centerX + halfPipe + 4, yTop + (yBottom - yTop) / 2);
+  }
+}
+
+function drawConstrictor(s: ShapeContext) {
+  const { ctx, centerX, yTop, yBottom, wellboreWidth, pipeWidth, isSelected, equipment } = s;
+  const base = EQUIPMENT_COLORS.constrictor;
+  const color = pipeColor(isSelected, base);
+  const con = equipment as Constrictor;
+  const height = yBottom - yTop;
+
+  // Draw pipe passing through
+  drawInnerPipeBore(ctx, centerX, yTop, yBottom, pipeWidth, '#475569');
+
+  // Constriction body (like a venturi - wider body, narrower internal neck)
+  const bodyW = wellboreWidth * 0.85;
+  const halfBody = bodyW / 2;
+  const neckW = pipeWidth * 0.5;
+  const halfNeck = neckW / 2;
+  const taper = Math.min(height * 0.25, 12);
+
+  ctx.beginPath();
+  ctx.moveTo(centerX - halfBody, yTop);
+  ctx.lineTo(centerX + halfBody, yTop);
+  ctx.lineTo(centerX + halfBody, yTop + taper);
+  ctx.lineTo(centerX + halfNeck, yTop + height / 2);
+  ctx.lineTo(centerX + halfBody, yBottom - taper);
+  ctx.lineTo(centerX + halfBody, yBottom);
+  ctx.lineTo(centerX - halfBody, yBottom);
+  ctx.lineTo(centerX - halfBody, yBottom - taper);
+  ctx.lineTo(centerX - halfNeck, yTop + height / 2);
+  ctx.lineTo(centerX - halfBody, yTop + taper);
+  ctx.closePath();
+
+  ctx.fillStyle = gradientVertical(ctx, yTop, yBottom, hex(base, 0.4), hex(base, 0.75));
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  if (height > 18) {
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 8px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const lbl = con.constrictionType === 'hydraulic' ? 'CON-H' : 'CON';
+    ctx.fillText(lbl, centerX, yTop + height / 2);
+  }
+}
 
 function drawBlankPipe(s: ShapeContext) {
   const { ctx, centerX, yTop, yBottom, pipeWidth, isSelected } = s;
@@ -724,7 +855,11 @@ function drawWashPipe(s: ShapeContext) {
 }
 
 export const SHAPE_DRAWERS: Record<EquipmentType, ShapeDrawer> = {
+  casing: drawCasing,
+  tubing: drawTubing,
   blank_pipe: drawBlankPipe,
+  pup_joint: drawPupJoint,
+  constrictor: drawConstrictor,
   swell_packer: drawSwellPacker,
   sand_screen: drawSandScreen,
   icd_screen: drawICDScreen,

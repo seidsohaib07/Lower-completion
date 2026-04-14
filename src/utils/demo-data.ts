@@ -71,7 +71,7 @@ export function generateDemoLogData(): LogDataSet {
   ];
 
   return {
-    wellName: 'Gullfaks A-42',
+    wellName: 'Demo Well',
     depthCurve,
     depthUnit: 'm',
     curves,

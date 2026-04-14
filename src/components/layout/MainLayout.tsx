@@ -7,51 +7,86 @@ import { PanelResizer } from './PanelResizer';
 import { TallyTable } from '../tally/TallyTable';
 import { Toolbox } from '../toolbox/Toolbox';
 
+/**
+ * In horizontal orientation we want depth to run along X (left → right).
+ * The simplest way to reuse all the existing Y-based canvas math is to:
+ *   - stack the log viewer and schematic viewer vertically (top/bottom)
+ *   - rotate each panel's content 90° clockwise via CSS, swapping its
+ *     apparent width/height so that the canvas' internal Y axis becomes
+ *     the screen's X axis.
+ */
 export function MainLayout() {
   const panelSplit = useUIStore((s) => s.panelSplit);
   const showProperties = useUIStore((s) => s.showProperties);
   const showTally = useUIStore((s) => s.showTally);
   const showToolbox = useUIStore((s) => s.showToolbox);
   const orientation = useViewportStore((s) => s.orientation);
+  const isHorizontal = orientation === 'horizontal';
 
-  const outerRef = useRef<HTMLDivElement>(null);
-  const [outerSize, setOuterSize] = useState({ w: 0, h: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ w: 0, h: 0 });
 
   useEffect(() => {
-    if (!outerRef.current) return;
+    if (!containerRef.current) return;
     const ro = new ResizeObserver((entries) => {
       const r = entries[0].contentRect;
-      setOuterSize({ w: r.width, h: r.height });
+      setSize({ w: r.width, h: r.height });
     });
-    ro.observe(outerRef.current);
+    ro.observe(containerRef.current);
     return () => ro.disconnect();
   }, []);
 
-  const isHorizontal = orientation === 'horizontal';
+  if (isHorizontal) {
+    // Stack panels vertically. Each panel's inner content is rotated 90° so
+    // that the canvas' depth (Y) axis becomes the on-screen X axis.
+    const halfH = size.h / 2;
+    const logH = Math.max(120, halfH * panelSplit * 2); // reuse panelSplit as ratio between top (logs) and bottom (schematic)
+    const compH = Math.max(120, size.h - logH);
 
-  // When horizontal, rotate the inner content -90deg. Swap width/height so the
-  // rotated element still fills its container.
-  const rotatedStyle = isHorizontal
-    ? {
-        width: outerSize.h,
-        height: outerSize.w,
-        transform: `rotate(-90deg) translateY(-${outerSize.w}px)`,
-        transformOrigin: 'top left',
-      }
-    : undefined;
+    const rotatedBoxStyle = (w: number, h: number): React.CSSProperties => ({
+      position: 'absolute',
+      width: h,
+      height: w,
+      transform: `rotate(-90deg) translate(-${w}px, 0)`,
+      transformOrigin: 'top left',
+      top: 0,
+      left: 0,
+    });
+
+    return (
+      <div className="flex flex-1 overflow-hidden">
+        {showToolbox && <Toolbox />}
+        <div ref={containerRef} className="flex-1 flex flex-col overflow-hidden relative" data-export-area>
+          <div className="shrink-0 overflow-hidden relative" style={{ height: logH, width: '100%' }}>
+            <div style={rotatedBoxStyle(size.w, logH)}>
+              <LogViewer />
+            </div>
+          </div>
+          <div className="shrink-0 overflow-hidden relative" style={{ height: compH, width: '100%' }}>
+            <div style={rotatedBoxStyle(size.w, compH)}>
+              <CompletionViewer />
+            </div>
+          </div>
+          {showTally && (
+            <div
+              className="h-64 border-t overflow-hidden shrink-0"
+              style={{ borderColor: 'var(--color-border)' }}
+            >
+              <TallyTable />
+            </div>
+          )}
+        </div>
+        {showProperties && <PropertiesPanel />}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
-      <div ref={outerRef} className="flex flex-1 overflow-hidden relative">
+      <div ref={containerRef} className="flex flex-1 overflow-hidden relative">
         <div
           id="main-panel-container"
-          className="flex overflow-hidden"
-          style={
-            rotatedStyle ?? {
-              width: '100%',
-              height: '100%',
-            }
-          }
+          className="flex overflow-hidden w-full h-full"
           data-export-area
         >
           {showToolbox && <Toolbox />}
@@ -73,18 +108,6 @@ export function MainLayout() {
 
           {showProperties && <PropertiesPanel />}
         </div>
-
-        {isHorizontal && (
-          <div
-            className="absolute bottom-2 right-2 text-[10px] px-2 py-1 rounded pointer-events-none"
-            style={{
-              background: 'var(--color-accent)',
-              color: '#1a1a2e',
-            }}
-          >
-            Horizontal view — switch to vertical for placement
-          </div>
-        )}
       </div>
 
       {showTally && (

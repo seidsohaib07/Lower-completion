@@ -1,6 +1,10 @@
 export type EquipmentType =
+  | 'casing'
+  | 'tubing'
   | 'blank_pipe'
+  | 'pup_joint'
   | 'swell_packer'
+  | 'constrictor'
   | 'sand_screen'
   | 'icd_screen'
   | 'aicd_screen'
@@ -31,6 +35,31 @@ export interface EquipmentBase {
 export interface BlankPipe extends EquipmentBase {
   type: 'blank_pipe';
   jointLength: number;   // meters (default 12.2m)
+}
+
+export interface Casing extends EquipmentBase {
+  type: 'casing';
+  jointLength: number;
+  // e.g. 9-5/8" casing, 7" liner
+  casingClass: 'surface' | 'intermediate' | 'production' | 'liner';
+}
+
+export interface Tubing extends EquipmentBase {
+  type: 'tubing';
+  jointLength: number;
+}
+
+export interface PupJoint extends EquipmentBase {
+  type: 'pup_joint';
+  // any length up to 6m typically
+}
+
+export interface Constrictor extends EquipmentBase {
+  type: 'constrictor';
+  // similar to a packer but mechanical flow restriction
+  constrictionType: 'mechanical' | 'hydraulic';
+  bodyOD: number;
+  maxOD: number;
 }
 
 export interface SwellPacker extends EquipmentBase {
@@ -126,8 +155,12 @@ export interface WashPipe extends EquipmentBase {
 }
 
 export type CompletionEquipment =
+  | Casing
+  | Tubing
   | BlankPipe
+  | PupJoint
   | SwellPacker
+  | Constrictor
   | SandScreen
   | ICDScreen
   | AICDScreen

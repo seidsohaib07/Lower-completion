@@ -21,6 +21,10 @@ import {
   DEFAULT_FLOAT_SHOE,
   DEFAULT_FLOAT_COLLAR,
   DEFAULT_WASH_PIPE,
+  DEFAULT_CASING,
+  DEFAULT_TUBING,
+  DEFAULT_PUP_JOINT,
+  DEFAULT_CONSTRICTOR,
   STANDARD_LENGTH,
   snapLengthToStandard,
 } from '../constants';
@@ -33,6 +37,7 @@ interface CompletionState {
   placeAtDepth: (centerMD: number, equipmentType: EquipmentType, lengthOverride?: number) => void;
   moveEquipment: (id: string, newTopMD: number) => void;
   removeEquipment: (id: string) => void;
+  duplicateEquipment: (id: string) => void;
   updateEquipment: (id: string, updates: Partial<CompletionEquipment>) => void;
   getItemAtDepth: (md: number) => CompletionEquipment | undefined;
   setCompletionString: (cs: CompletionString) => void;
@@ -59,8 +64,47 @@ function createEquipment(type: EquipmentType, topMD: number, bottomMD: number): 
   const length = bottomMD - topMD;
 
   switch (type) {
+    case 'casing':
+      return {
+        id, type, topMD, bottomMD, length,
+        od: DEFAULT_CASING.od,
+        innerDiameter: DEFAULT_CASING.innerDiameter,
+        jointLength: DEFAULT_CASING.jointLength,
+        grade: DEFAULT_CASING.grade,
+        weight: DEFAULT_CASING.weight,
+        connectionType: DEFAULT_CASING.connectionType,
+        casingClass: DEFAULT_CASING.casingClass,
+      };
+    case 'tubing':
+      return {
+        id, type, topMD, bottomMD, length,
+        od: DEFAULT_TUBING.od,
+        innerDiameter: DEFAULT_TUBING.innerDiameter,
+        jointLength: DEFAULT_TUBING.jointLength,
+        grade: DEFAULT_TUBING.grade,
+        weight: DEFAULT_TUBING.weight,
+        connectionType: DEFAULT_TUBING.connectionType,
+      };
     case 'blank_pipe':
       return createBlankPipe(topMD, bottomMD);
+    case 'pup_joint':
+      return {
+        id, type, topMD, bottomMD, length,
+        od: DEFAULT_PUP_JOINT.od,
+        innerDiameter: DEFAULT_PUP_JOINT.innerDiameter,
+        grade: DEFAULT_PUP_JOINT.grade,
+        weight: DEFAULT_PUP_JOINT.weight,
+        connectionType: DEFAULT_PUP_JOINT.connectionType,
+      };
+    case 'constrictor':
+      return {
+        id, type, topMD, bottomMD, length,
+        od: DEFAULT_CONSTRICTOR.od,
+        innerDiameter: DEFAULT_CONSTRICTOR.innerDiameter,
+        constrictionType: DEFAULT_CONSTRICTOR.constrictionType,
+        bodyOD: DEFAULT_CONSTRICTOR.bodyOD,
+        maxOD: DEFAULT_CONSTRICTOR.maxOD,
+      };
     case 'swell_packer':
       return {
         id, type, topMD, bottomMD, length,
@@ -181,6 +225,38 @@ function createEquipment(type: EquipmentType, topMD: number, bottomMD: number): 
   }
 }
 
+/**
+ * Adjust a placement interval so that it does not overlap any existing non-blank
+ * equipment. If the requested window collides with a fixed item, shift the new
+ * interval above or below that item (whichever side has more free space).
+ */
+function shiftIntervalAwayFromObstacles(
+  items: CompletionEquipment[],
+  requestedTop: number,
+  requestedBottom: number
+): { topMD: number; bottomMD: number } {
+  const length = requestedBottom - requestedTop;
+  const obstacles = items.filter((i) => i.type !== 'blank_pipe');
+  let top = requestedTop;
+  let bottom = requestedBottom;
+  // Iterate a few passes to handle sequential overlaps.
+  for (let pass = 0; pass < 8; pass++) {
+    const hit = obstacles.find((o) => o.bottomMD > top && o.topMD < bottom);
+    if (!hit) break;
+    const centerReq = (top + bottom) / 2;
+    const centerHit = (hit.topMD + hit.bottomMD) / 2;
+    if (centerReq <= centerHit) {
+      // shift above the obstacle
+      bottom = hit.topMD;
+      top = bottom - length;
+    } else {
+      top = hit.bottomMD;
+      bottom = top + length;
+    }
+  }
+  return { topMD: top, bottomMD: bottom };
+}
+
 // Split overlapping items: keep portions outside [topMD, bottomMD], drop portions inside.
 function splitAroundInterval(
   items: CompletionEquipment[],
@@ -261,10 +337,20 @@ export const useCompletionStore = create<CompletionState>((set, get) => ({
     // Snap length to standard for fixed-length equipment, anchored at topMD
     const requested = bottomMD - topMD;
     const finalLength = snapLengthToStandard(equipmentType, requested);
-    const finalBottom = topMD + finalLength;
+    let finalTop = topMD;
+    let finalBottom = topMD + finalLength;
 
-    const kept = splitAroundInterval(completionString.items, topMD, finalBottom);
-    kept.push(createEquipment(equipmentType, topMD, finalBottom));
+    // Shift around any fixed existing equipment instead of replacing.
+    const adjusted = shiftIntervalAwayFromObstacles(
+      completionString.items,
+      finalTop,
+      finalBottom
+    );
+    finalTop = adjusted.topMD;
+    finalBottom = adjusted.bottomMD;
+
+    const kept = splitAroundInterval(completionString.items, finalTop, finalBottom);
+    kept.push(createEquipment(equipmentType, finalTop, finalBottom));
     kept.sort((a, b) => a.topMD - b.topMD);
 
     set({ completionString: { ...completionString, items: kept } });
@@ -275,8 +361,16 @@ export const useCompletionStore = create<CompletionState>((set, get) => ({
     const std = STANDARD_LENGTH[equipmentType];
     const length =
       lengthOverride ?? (std != null ? std : 5.0); // variable types default to 5m when drop-placed
-    const topMD = centerMD - length / 2;
-    const bottomMD = topMD + length;
+    let topMD = centerMD - length / 2;
+    let bottomMD = topMD + length;
+
+    const adjusted = shiftIntervalAwayFromObstacles(
+      completionString.items,
+      topMD,
+      bottomMD
+    );
+    topMD = adjusted.topMD;
+    bottomMD = adjusted.bottomMD;
 
     const kept = splitAroundInterval(completionString.items, topMD, bottomMD);
     kept.push(createEquipment(equipmentType, topMD, bottomMD));
@@ -324,6 +418,38 @@ export const useCompletionStore = create<CompletionState>((set, get) => ({
     const merged = mergeAdjacentBlankPipes(filtered);
 
     set({ completionString: { ...completionString, items: merged } });
+  },
+
+  duplicateEquipment: (id) => {
+    const { completionString } = get();
+    const original = completionString.items.find((i) => i.id === id);
+    if (!original || original.type === 'blank_pipe') return;
+
+    const length = original.length;
+    // Place the duplicate directly below the original, shifting around any
+    // existing obstacles as needed.
+    let newTop = original.bottomMD;
+    let newBottom = newTop + length;
+    const adjusted = shiftIntervalAwayFromObstacles(
+      completionString.items,
+      newTop,
+      newBottom
+    );
+    newTop = adjusted.topMD;
+    newBottom = adjusted.bottomMD;
+
+    const kept = splitAroundInterval(completionString.items, newTop, newBottom);
+    const copy: CompletionEquipment = {
+      ...original,
+      id: uuidv4(),
+      topMD: newTop,
+      bottomMD: newBottom,
+      length: newBottom - newTop,
+    } as CompletionEquipment;
+    kept.push(copy);
+    kept.sort((a, b) => a.topMD - b.topMD);
+
+    set({ completionString: { ...completionString, items: kept } });
   },
 
   updateEquipment: (id, updates) => {

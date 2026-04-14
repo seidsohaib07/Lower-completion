@@ -2,6 +2,60 @@
  * Shared canvas drawing helpers.
  */
 
+export interface CanvasTheme {
+  bg: string;            // track background
+  bgDeep: string;        // depth-track / deep surface background
+  textPrimary: string;   // primary label / axis text
+  textMuted: string;     // secondary text
+  gridMajor: string;     // major grid line
+  gridMinor: string;     // minor grid line
+  border: string;        // track / panel border
+}
+
+/**
+ * Resolve current theme colors by reading CSS custom properties set on <html>.
+ * Falls back to sensible defaults if computed styles are not accessible.
+ */
+export function getCanvasTheme(): CanvasTheme {
+  if (typeof document === 'undefined') {
+    return DARK_THEME;
+  }
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  const style = getComputedStyle(document.documentElement);
+  const v = (name: string, fallback: string) =>
+    (style.getPropertyValue(name).trim() || fallback);
+  if (isLight) {
+    return {
+      bg: v('--color-log-bg', '#ffffff'),
+      bgDeep: v('--color-surface-deep', '#e2e8f0'),
+      textPrimary: v('--color-text', '#0f172a'),
+      textMuted: v('--color-text-muted', '#475569'),
+      gridMajor: '#94a3b8',
+      gridMinor: '#cbd5e1',
+      border: v('--color-border', '#cbd5e1'),
+    };
+  }
+  return {
+    bg: v('--color-log-bg', '#0b1220'),
+    bgDeep: v('--color-surface-deep', '#0f172a'),
+    textPrimary: v('--color-text', '#e2e8f0'),
+    textMuted: v('--color-text-muted', '#94a3b8'),
+    gridMajor: '#475569',
+    gridMinor: '#1e293b',
+    border: v('--color-border', '#334155'),
+  };
+}
+
+const DARK_THEME: CanvasTheme = {
+  bg: '#0b1220',
+  bgDeep: '#0f172a',
+  textPrimary: '#e2e8f0',
+  textMuted: '#94a3b8',
+  gridMajor: '#475569',
+  gridMinor: '#1e293b',
+  border: '#334155',
+};
+
 export function clearCanvas(ctx: CanvasRenderingContext2D, width: number, height: number, bgColor: string = '#1a1a2e') {
   ctx.fillStyle = bgColor;
   ctx.fillRect(0, 0, width, height);

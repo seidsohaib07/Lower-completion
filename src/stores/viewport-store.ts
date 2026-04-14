@@ -6,6 +6,8 @@ import {
   ZOOM_FACTOR,
 } from '../constants';
 
+export type DepthMode = 'MD' | 'TVD_RKB' | 'TVD_MSL';
+
 interface ViewportState {
   topDepth: number;
   bottomDepth: number;
@@ -13,6 +15,11 @@ interface ViewportState {
   orientation: 'vertical' | 'horizontal';
   totalMinDepth: number;
   totalMaxDepth: number;
+
+  // Depth reference mode (for display only; MD remains the internal coordinate)
+  depthMode: DepthMode;
+  rkbElevation: number;   // meters, RKB above sea level (TVD_MSL = TVD_RKB - rkbElevation assumed below, sign handled in conversion)
+  tvdOffset: number;      // meters, simple MD->TVD_RKB offset for straight wells (TVD_RKB = MD - tvdOffset)
 
   // Actions
   setDepthRange: (top: number, bottom: number) => void;
@@ -23,6 +30,11 @@ interface ViewportState {
   fitToData: (minMD: number, maxMD: number, containerHeight: number) => void;
   setTotalRange: (minMD: number, maxMD: number) => void;
   toggleOrientation: () => void;
+  setDepthMode: (mode: DepthMode) => void;
+  setRkbElevation: (v: number) => void;
+  setTvdOffset: (v: number) => void;
+  /** Convert an MD depth to the currently-selected display mode. */
+  mdToDisplay: (md: number) => number;
   depthToPixel: (md: number) => number;
   pixelToDepth: (px: number) => number;
 }
@@ -34,6 +46,21 @@ export const useViewportStore = create<ViewportState>((set, get) => ({
   orientation: 'vertical',
   totalMinDepth: 2500,
   totalMaxDepth: 3000,
+  depthMode: 'MD',
+  rkbElevation: 25,   // default North Sea RKB elevation (~25 m)
+  tvdOffset: 0,       // MD==TVD_RKB by default (vertical well)
+
+  setDepthMode: (mode) => set({ depthMode: mode }),
+  setRkbElevation: (v) => set({ rkbElevation: v }),
+  setTvdOffset: (v) => set({ tvdOffset: v }),
+  mdToDisplay: (md) => {
+    const { depthMode, tvdOffset, rkbElevation } = get();
+    if (depthMode === 'MD') return md;
+    const tvdRkb = md - tvdOffset;
+    if (depthMode === 'TVD_RKB') return tvdRkb;
+    // TVD_MSL: subtract the RKB elevation above mean sea level
+    return tvdRkb - rkbElevation;
+  },
 
   setDepthRange: (top, bottom) => {
     set({ topDepth: top, bottomDepth: bottom });
