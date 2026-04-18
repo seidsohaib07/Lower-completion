@@ -34,13 +34,6 @@ export function renderCompletionSchematic(
   drawOpenHole(ctx, centerX, halfWellbore, height, theme);
   drawDepthGrid(ctx, width, height, topDepth, bottomDepth, pixelsPerMeter, theme);
 
-  // Wellhead shown only if MD=0 is within the visible range near the top.
-  const hangerTopDepth = items.length > 0 ? items[0].topMD : topDepth;
-  const hangerY = (hangerTopDepth - topDepth) * pixelsPerMeter;
-  if (hangerY > -40 && hangerY < height) {
-    drawWellhead(ctx, centerX, hangerY, wellboreWidth, theme);
-  }
-
   for (const item of items) {
     const yTop = (item.topMD - topDepth) * pixelsPerMeter;
     const yBottom = (item.bottomMD - topDepth) * pixelsPerMeter;
@@ -201,85 +194,6 @@ function drawOpenHole(
  * Draw a wellhead icon (christmas tree) above the hanger depth. This sits
  * above the start of the completion string to orient the viewer.
  */
-function drawWellhead(
-  ctx: CanvasRenderingContext2D,
-  centerX: number,
-  hangerY: number,
-  wellboreWidth: number,
-  theme: 'light' | 'dark'
-) {
-  const topY = hangerY - 44;
-  if (topY > 0 + 60) return; // only show when the top of the well is near the visible top
-  const bodyW = Math.max(40, wellboreWidth * 0.9);
-  const halfB = bodyW / 2;
-  const accent = theme === 'dark' ? '#f59e0b' : '#b45309';
-  const body = theme === 'dark' ? '#334155' : '#475569';
-  const shine = theme === 'dark' ? '#64748b' : '#94a3b8';
-
-  // Ground line
-  ctx.strokeStyle = theme === 'dark' ? '#475569' : '#94a3b8';
-  ctx.lineWidth = 1;
-  ctx.setLineDash([4, 3]);
-  ctx.beginPath();
-  ctx.moveTo(centerX - bodyW, hangerY);
-  ctx.lineTo(centerX + bodyW, hangerY);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Main valve body (vertical rectangle with beveled top)
-  const wh = Math.min(40, hangerY);
-  const yStart = hangerY - wh;
-  ctx.fillStyle = body;
-  ctx.fillRect(centerX - halfB * 0.6, yStart, halfB * 1.2, wh);
-
-  // Top flange
-  ctx.fillStyle = shine;
-  ctx.fillRect(centerX - halfB * 0.75, yStart, halfB * 1.5, 3);
-
-  // Master valve (bigger square)
-  ctx.fillStyle = accent;
-  ctx.fillRect(centerX - halfB * 0.9, yStart + wh * 0.35, halfB * 1.8, wh * 0.3);
-  ctx.strokeStyle = body;
-  ctx.lineWidth = 1;
-  ctx.strokeRect(centerX - halfB * 0.9, yStart + wh * 0.35, halfB * 1.8, wh * 0.3);
-
-  // Side wings (wings valves)
-  const wingY = yStart + wh * 0.45;
-  const wingH = wh * 0.14;
-  ctx.fillStyle = accent;
-  ctx.fillRect(centerX - halfB * 1.35, wingY, halfB * 0.45, wingH);
-  ctx.fillRect(centerX + halfB * 0.9, wingY, halfB * 0.45, wingH);
-  // Wing wheels
-  ctx.strokeStyle = shine;
-  ctx.lineWidth = 1.2;
-  ctx.beginPath();
-  ctx.arc(centerX - halfB * 1.2, wingY + wingH / 2, 3, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(centerX + halfB * 1.2, wingY + wingH / 2, 3, 0, Math.PI * 2);
-  ctx.stroke();
-
-  // Top handwheel
-  ctx.strokeStyle = shine;
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.arc(centerX, yStart - 4, 5, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(centerX - 5, yStart - 4);
-  ctx.lineTo(centerX + 5, yStart - 4);
-  ctx.moveTo(centerX, yStart - 9);
-  ctx.lineTo(centerX, yStart + 1);
-  ctx.stroke();
-
-  // Label
-  ctx.fillStyle = theme === 'dark' ? '#e2e8f0' : '#334155';
-  ctx.font = '9px Inter, system-ui, sans-serif';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('Wellhead', centerX + halfB * 1.5, yStart + wh / 2);
-}
-
 function drawDepthGrid(
   ctx: CanvasRenderingContext2D,
   width: number,

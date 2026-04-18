@@ -11,10 +11,18 @@ export interface PdfOverlay {
   heightPx: number;
 }
 
+export interface FormationMarker {
+  name: string;
+  topMD: number;
+  bottomMD?: number;
+}
+
 interface LogDataState {
   logData: LogDataSet | null;
   tracks: TrackConfig[];
   pdfOverlay: PdfOverlay | null;
+  formationMarkers: FormationMarker[];
+  showFormationMarkers: boolean;
 
   setLogData: (data: LogDataSet) => void;
   clearLogData: () => void;
@@ -24,12 +32,17 @@ interface LogDataState {
   updateTrack: (id: string, updates: Partial<TrackConfig>) => void;
   reorderTracks: (fromIndex: number, toIndex: number) => void;
   autoCreateTracks: () => void;
+  addFormationMarkers: (markers: { name: string; topMD: number; bottomMD?: number }[]) => void;
+  clearFormationMarkers: () => void;
+  toggleFormationMarkers: () => void;
 }
 
 export const useLogDataStore = create<LogDataState>((set, get) => ({
   logData: null,
   tracks: [],
   pdfOverlay: null,
+  formationMarkers: [],
+  showFormationMarkers: true,
 
   setLogData: (data) => {
     set({ logData: data });
@@ -38,7 +51,7 @@ export const useLogDataStore = create<LogDataState>((set, get) => ({
   },
 
   clearLogData: () => {
-    set({ logData: null, tracks: [], pdfOverlay: null });
+    set({ logData: null, tracks: [], pdfOverlay: null, formationMarkers: [] });
   },
 
   setPdfOverlay: (overlay) => set({ pdfOverlay: overlay }),
@@ -78,5 +91,17 @@ export const useLogDataStore = create<LogDataState>((set, get) => ({
     });
 
     set({ tracks });
+  },
+
+  addFormationMarkers: (markers) => {
+    set((s) => ({ formationMarkers: [...s.formationMarkers, ...markers] }));
+  },
+
+  clearFormationMarkers: () => {
+    set({ formationMarkers: [] });
+  },
+
+  toggleFormationMarkers: () => {
+    set((s) => ({ showFormationMarkers: !s.showFormationMarkers }));
   },
 }));
