@@ -1,8 +1,9 @@
 import { renderGrid } from './grid-renderer';
 import { valueToTrackPosition, isNullValue } from '../utils/log-processing';
 import { getVisibleRange } from '../utils/depth-utils';
-import { getCanvasTheme } from './render-utils';
+import { getCanvasTheme, drawHorizontalLine, drawText } from './render-utils';
 import type { TrackConfig, LogCurve } from '../types';
+import type { FormationMarker } from '../stores/log-data-store';
 
 export function renderLogTrack(
   ctx: CanvasRenderingContext2D,
@@ -13,7 +14,9 @@ export function renderLogTrack(
   pixelsPerMeter: number,
   trackConfig: TrackConfig,
   curve: LogCurve | undefined,
-  depthCurve: number[]
+  depthCurve: number[],
+  formationMarkers?: FormationMarker[],
+  showFormationMarkers?: boolean
 ) {
   const theme = getCanvasTheme();
   // Background
@@ -112,6 +115,22 @@ export function renderLogTrack(
       ctx.lineTo(segment[i].x, segment[i].y);
     }
     ctx.stroke();
+  }
+
+  // Formation markers
+  if (showFormationMarkers && formationMarkers && formationMarkers.length > 0) {
+    const markerColor = theme.isDark ? '#f59e0b' : '#b45309';
+    for (const marker of formationMarkers) {
+      const y = (marker.topMD - topDepth) * pixelsPerMeter;
+      if (y < -20 || y > height + 20) continue;
+      drawHorizontalLine(ctx, y, 0, width, markerColor, 1.2);
+      if (marker.bottomMD !== undefined) {
+        const yBot = (marker.bottomMD - topDepth) * pixelsPerMeter;
+        if (yBot >= -20 && yBot <= height + 20) {
+          drawHorizontalLine(ctx, yBot, 0, width, markerColor, 0.8);
+        }
+      }
+    }
   }
 
   ctx.restore();

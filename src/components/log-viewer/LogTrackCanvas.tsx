@@ -17,6 +17,8 @@ export function LogTrackCanvas({ trackConfig }: LogTrackCanvasProps) {
   const bottomDepth = useViewportStore((s) => s.bottomDepth);
   const pixelsPerMeter = useViewportStore((s) => s.pixelsPerMeter);
   const logData = useLogDataStore((s) => s.logData);
+  const formationMarkers = useLogDataStore((s) => s.formationMarkers);
+  const showFormationMarkers = useLogDataStore((s) => s.showFormationMarkers);
   const theme = useUIStore((s) => s.theme);
 
   useEffect(() => {
@@ -27,9 +29,9 @@ export function LogTrackCanvas({ trackConfig }: LogTrackCanvasProps) {
     const depthCurve = logData?.depthCurve ?? [];
 
     requestRender((ctx, w, h) => {
-      renderLogTrack(ctx, w, h, topDepth, bottomDepth, pixelsPerMeter, trackConfig, curve, depthCurve);
+      renderLogTrack(ctx, w, h, topDepth, bottomDepth, pixelsPerMeter, trackConfig, curve, depthCurve, formationMarkers, showFormationMarkers);
     });
-  }, [width, height, topDepth, bottomDepth, pixelsPerMeter, trackConfig, logData, theme, requestRender]);
+  }, [width, height, topDepth, bottomDepth, pixelsPerMeter, trackConfig, logData, theme, formationMarkers, showFormationMarkers, requestRender]);
 
   return (
     <div ref={containerRef} className="flex-1 h-full canvas-container" style={{ minWidth: trackConfig.width }}>

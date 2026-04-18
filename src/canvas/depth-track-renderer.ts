@@ -1,4 +1,5 @@
 import { drawText, drawHorizontalLine, getCanvasTheme } from './render-utils';
+import type { FormationMarker } from '../stores/log-data-store';
 
 export function renderDepthTrack(
   ctx: CanvasRenderingContext2D,
@@ -8,7 +9,9 @@ export function renderDepthTrack(
   bottomDepth: number,
   pixelsPerMeter: number,
   depthLabel: string = 'MD',
-  labelFormatter?: (md: number) => number
+  labelFormatter?: (md: number) => number,
+  formationMarkers?: FormationMarker[],
+  showFormationMarkers?: boolean
 ) {
   const theme = getCanvasTheme();
   // Background
@@ -61,6 +64,23 @@ export function renderDepthTrack(
     align: 'center',
     baseline: 'top',
   });
+
+  // Formation markers
+  if (showFormationMarkers && formationMarkers && formationMarkers.length > 0) {
+    const markerColor = theme.isDark ? '#f59e0b' : '#b45309';
+    const markerTextColor = theme.isDark ? '#fbbf24' : '#92400e';
+    for (const marker of formationMarkers) {
+      const y = (marker.topMD - topDepth) * pixelsPerMeter;
+      if (y < -20 || y > height + 20) continue;
+      drawHorizontalLine(ctx, y, 0, width, markerColor, 1.2);
+      drawText(ctx, marker.name, 4, y - 3, {
+        color: markerTextColor,
+        font: 'bold 8px Inter, system-ui, sans-serif',
+        align: 'left',
+        baseline: 'bottom',
+      });
+    }
+  }
 }
 
 function calculateDepthGridSpacing(depthRange: number): number {
