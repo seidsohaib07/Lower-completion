@@ -3,8 +3,6 @@ import { useUIStore, useViewportStore, useLogDataStore } from '../../stores';
 import { ZoomControls } from './ZoomControls';
 
 export function MainToolbar() {
-  const activeTool = useUIStore((s) => s.activeTool);
-  const setActiveTool = useUIStore((s) => s.setActiveTool);
   const depthMode = useViewportStore((s) => s.depthMode);
   const setDepthMode = useViewportStore((s) => s.setDepthMode);
   const rkbElevation = useViewportStore((s) => s.rkbElevation);
@@ -34,35 +32,12 @@ export function MainToolbar() {
 
   return (
     <div
-      className="flex items-center justify-between h-9 px-3 border-b select-none shrink-0"
+      className="flex items-center justify-end h-9 px-3 border-b select-none shrink-0"
       style={{
         background: 'var(--color-surface-deep)',
         borderColor: 'var(--color-border)',
       }}
     >
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => setActiveTool('select')}
-          title="Select (S)"
-          className="w-7 h-7 flex items-center justify-center rounded transition-all"
-          style={{
-            background: activeTool === 'select' ? 'var(--color-primary)' : 'var(--color-surface-light)',
-            color: activeTool === 'select' ? '#fff' : 'var(--color-text-muted)',
-            border: '1px solid var(--color-border)',
-          }}
-        >
-          <svg viewBox="0 0 24 24" width={14} height={14} fill="none">
-            <path
-              d="M5 3l14 9-7 1.5L9 21z"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinejoin="round"
-              fill={activeTool === 'select' ? 'currentColor' : 'none'}
-            />
-          </svg>
-        </button>
-      </div>
-
       <div className="flex items-center gap-2">
         {/* Depth mode selector */}
         <div ref={depthRef} className="relative">

@@ -342,9 +342,7 @@ export function MenuBar() {
           {menus.map((menu, idx) => (
             <div key={menu.label} className="flex items-center">
               {idx > 0 && (
-                <div className="flex items-center">
-                  <span className="text-[11px] px-1.5" style={{ color: 'var(--color-border)' }}>|</span>
-                </div>
+                <span className="text-[11px] mx-1" style={{ color: 'var(--color-border)' }}>|</span>
               )}
               <div className="relative">
               <button

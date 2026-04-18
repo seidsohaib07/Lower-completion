@@ -7,7 +7,11 @@ import { LogTrackCanvas } from './LogTrackCanvas';
 import { TrackHeader } from './TrackHeader';
 import { PdfOverlayTrack } from './PdfOverlayTrack';
 
-export function LogViewer() {
+interface LogViewerProps {
+  horizontalTrackHeight?: number;
+}
+
+export function LogViewer({ horizontalTrackHeight }: LogViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tracks = useLogDataStore((s) => s.tracks);
   const logData = useLogDataStore((s) => s.logData);
@@ -15,12 +19,15 @@ export function LogViewer() {
   const topDepth = useViewportStore((s) => s.topDepth);
   const bottomDepth = useViewportStore((s) => s.bottomDepth);
   const pixelsPerMeter = useViewportStore((s) => s.pixelsPerMeter);
+  const orientation = useViewportStore((s) => s.orientation);
 
   const depthMode = useViewportStore((s) => s.depthMode);
   const showDual = depthMode === 'TVD_MSL';
   const depthHeaderWidth = showDual ? DEPTH_TRACK_WIDTH + 50 : DEPTH_TRACK_WIDTH;
 
   useSynchronizedScroll(containerRef);
+
+  const isHorizontal = orientation === 'horizontal';
 
   if (!logData && !pdfOverlay) {
     return (
@@ -38,16 +45,25 @@ export function LogViewer() {
 
   const visibleTracks = tracks.filter((t) => t.visible);
 
+  // In horizontal mode, calculate track widths to fit within the available height
+  // (which is CSS width after rotation). Show at least 5 tracks without scrolling.
+  let trackMinWidth: number | undefined;
+  if (isHorizontal && horizontalTrackHeight && visibleTracks.length > 0) {
+    const available = horizontalTrackHeight - depthHeaderWidth - 2;
+    trackMinWidth = Math.max(35, Math.floor(available / Math.max(visibleTracks.length, 1)));
+  }
+
   return (
     <div
       ref={containerRef}
       className="flex-1 flex flex-col h-full overflow-hidden"
       style={{ background: 'var(--color-log-bg)' }}
     >
+      {/* Headers */}
       <div className="flex shrink-0">
         <div
-          className="shrink-0 h-10 flex items-center justify-center border-b"
-          style={{ width: depthHeaderWidth, borderColor: 'var(--color-border)' }}
+          className="shrink-0 flex items-center justify-center border-b"
+          style={{ width: depthHeaderWidth, height: isHorizontal ? 24 : 40, borderColor: 'var(--color-border)' }}
         >
           {showDual ? (
             <div className="flex w-full">
@@ -59,14 +75,21 @@ export function LogViewer() {
           )}
         </div>
         {visibleTracks.map((track) => (
-          <div key={track.id} style={{ minWidth: track.width, flex: 1 }}>
-            <TrackHeader trackConfig={track} />
+          <div
+            key={track.id}
+            style={{
+              minWidth: trackMinWidth ?? track.width,
+              maxWidth: trackMinWidth,
+              flex: trackMinWidth ? `0 0 ${trackMinWidth}px` : 1,
+            }}
+          >
+            <TrackHeader trackConfig={track} compact={isHorizontal} />
           </div>
         ))}
         {pdfOverlay && (
           <div
-            className="h-10 flex items-center justify-center border-b"
-            style={{ minWidth: 200, flex: 1, borderColor: 'var(--color-border)' }}
+            className="flex items-center justify-center border-b"
+            style={{ minWidth: 200, flex: 1, height: isHorizontal ? 24 : 40, borderColor: 'var(--color-border)' }}
           >
             <span
               className="text-[10px] font-semibold"
@@ -78,10 +101,15 @@ export function LogViewer() {
         )}
       </div>
 
+      {/* Track canvases */}
       <div className="flex flex-1 overflow-hidden">
         <DepthTrackCanvas />
         {visibleTracks.map((track) => (
-          <LogTrackCanvas key={track.id} trackConfig={track} />
+          <LogTrackCanvas
+            key={track.id}
+            trackConfig={track}
+            minWidthOverride={trackMinWidth}
+          />
         ))}
         {pdfOverlay && (
           <PdfOverlayTrack

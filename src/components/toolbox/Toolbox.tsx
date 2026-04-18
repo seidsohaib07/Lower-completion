@@ -37,10 +37,10 @@ export function Toolbox() {
       }}
       data-no-export
     >
-      {/* Tab bar */}
+      {/* Browser-style tab bar */}
       <div
-        className="flex items-end border-b px-2 gap-0"
-        style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
+        className="flex items-end px-3 gap-1 pt-1"
+        style={{ background: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)' }}
       >
         {TOOLBOX_GROUPS.map((group) => {
           const isActive = activeTab === group.name;
@@ -49,7 +49,7 @@ export function Toolbox() {
             <button
               key={group.name}
               onClick={() => setActiveTab(group.name)}
-              className="px-4 py-1.5 text-[10px] font-semibold tracking-wide transition-all border-t border-l border-r relative"
+              className="px-5 py-1.5 text-[10px] font-semibold tracking-wide transition-all relative"
               style={{
                 background: isActive ? 'var(--color-surface-deep)' : 'transparent',
                 color: hasActiveTool
@@ -57,17 +57,19 @@ export function Toolbox() {
                   : isActive
                   ? 'var(--color-text)'
                   : 'var(--color-text-muted)',
-                borderColor: isActive ? 'var(--color-border)' : 'transparent',
-                borderBottomColor: isActive ? 'var(--color-surface-deep)' : 'transparent',
-                borderRadius: '4px 4px 0 0',
+                borderTop: isActive ? '2px solid var(--color-primary)' : '2px solid transparent',
+                borderLeft: isActive ? '1px solid var(--color-border)' : '1px solid transparent',
+                borderRight: isActive ? '1px solid var(--color-border)' : '1px solid transparent',
+                borderBottom: 'none',
+                borderRadius: '8px 8px 0 0',
                 marginBottom: isActive ? -1 : 0,
-                zIndex: isActive ? 1 : 0,
+                zIndex: isActive ? 2 : 0,
               }}
             >
               {group.name}
               {hasActiveTool && (
                 <span
-                  className="ml-1 inline-block w-1.5 h-1.5 rounded-full"
+                  className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full"
                   style={{ background: 'var(--color-accent)', verticalAlign: 'middle' }}
                 />
               )}
@@ -76,8 +78,46 @@ export function Toolbox() {
         })}
       </div>
 
-      {/* Equipment items — horizontal scroll row */}
-      <div className="flex items-center gap-1 px-2 py-1 overflow-x-auto">
+      {/* Equipment items row — Select cursor first, then equipment */}
+      <div className="flex items-center gap-1.5 px-3 py-1.5 overflow-x-auto">
+        {/* Select tool */}
+        <button
+          title="Select (S)"
+          onClick={() => setActiveTool(activeTool === 'select' ? 'select' : 'select')}
+          className="flex flex-col items-center gap-0.5 px-2 pt-1 pb-0.5 rounded transition-all shrink-0"
+          style={{
+            background: activeTool === 'select' ? 'var(--color-primary-light, rgba(59,130,246,0.15))' : 'transparent',
+            border: activeTool === 'select' ? '1px solid var(--color-primary)' : '1px solid transparent',
+            minWidth: 52,
+          }}
+        >
+          <div
+            style={{
+              opacity: activeTool === 'select' ? 1 : 0.65,
+            }}
+          >
+            <svg viewBox="0 0 24 24" width={28} height={28} fill="none">
+              <path
+                d="M5 3l14 9-7 1.5L9 21z"
+                stroke={activeTool === 'select' ? 'var(--color-primary)' : 'var(--color-text-muted)'}
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+                fill={activeTool === 'select' ? 'var(--color-primary)' : 'none'}
+              />
+            </svg>
+          </div>
+          <span
+            className="text-[8px] text-center leading-tight whitespace-nowrap"
+            style={{ color: activeTool === 'select' ? 'var(--color-primary)' : 'var(--color-text-muted)', maxWidth: 56 }}
+          >
+            Select
+          </span>
+        </button>
+
+        {/* Separator */}
+        <div className="w-px h-8 shrink-0" style={{ background: 'var(--color-border)' }} />
+
+        {/* Equipment items */}
         {currentGroup.items.map((type) => {
           const toolId = `place_${type}` as const;
           const isActive = activeTool === toolId;
