@@ -37,15 +37,14 @@ export function MainLayout() {
   }, []);
 
   if (isHorizontal) {
-    // Reuse panelSplit as ratio of the top half (logs) vs the bottom half (schematic).
-    const logH = Math.max(120, size.h * panelSplit);
-    const compH = Math.max(120, size.h - logH);
+    // Horizontal: depth runs left → right. We split the screen top (logs) / bottom (schematic).
+    const toolboxH = showToolbox ? 64 : 0;
+    const propertiesW = showProperties ? 260 : 0;
+    const effectiveW = (size.w > 0 ? size.w : window.innerWidth) - propertiesW;
+    const availH = (size.h > 0 ? size.h : window.innerHeight) - toolboxH;
+    const logH = Math.max(100, availH * panelSplit);
+    const compH = Math.max(100, availH - logH);
 
-    /**
-     * Return the style needed to render a (W × H) horizontal-display panel
-     * using the existing vertical canvas layout. The canvas is sized at
-     * (H × W) pre-rotation and transformed into the final horizontal box.
-     */
     const rotatedBoxStyle = (W: number, H: number): React.CSSProperties => ({
       position: 'absolute',
       width: H,
@@ -57,13 +56,9 @@ export function MainLayout() {
     });
 
     return (
-      <div className="flex flex-1 overflow-hidden">
-        {showToolbox && (
-          <div data-no-export>
-            <Toolbox />
-          </div>
-        )}
-        <div className="flex-1 flex flex-col overflow-hidden relative">
+      <div className="flex flex-col flex-1 overflow-hidden">
+        {showToolbox && <Toolbox />}
+        <div className="flex flex-1 overflow-hidden">
           <div
             ref={containerRef}
             className="flex-1 flex flex-col overflow-hidden relative"
@@ -74,7 +69,7 @@ export function MainLayout() {
               className="shrink-0 overflow-hidden relative border-b"
               style={{ height: logH, width: '100%', borderColor: 'var(--color-border)' }}
             >
-              <div style={rotatedBoxStyle(size.w, logH)}>
+              <div style={rotatedBoxStyle(effectiveW, logH)}>
                 <LogViewer />
               </div>
             </div>
@@ -82,24 +77,24 @@ export function MainLayout() {
               className="shrink-0 overflow-hidden relative"
               style={{ height: compH, width: '100%' }}
             >
-              <div style={rotatedBoxStyle(size.w, compH)}>
+              <div style={rotatedBoxStyle(effectiveW, compH)}>
                 <CompletionViewer />
               </div>
             </div>
           </div>
-          {showTally && (
-            <div
-              className="h-64 border-t overflow-hidden shrink-0"
-              style={{ borderColor: 'var(--color-border)' }}
-              data-no-export
-            >
-              <TallyTable />
+          {showProperties && (
+            <div data-no-export>
+              <PropertiesPanel />
             </div>
           )}
         </div>
-        {showProperties && (
-          <div data-no-export>
-            <PropertiesPanel />
+        {showTally && (
+          <div
+            className="h-64 border-t overflow-hidden shrink-0"
+            style={{ borderColor: 'var(--color-border)' }}
+            data-no-export
+          >
+            <TallyTable />
           </div>
         )}
       </div>
@@ -108,18 +103,13 @@ export function MainLayout() {
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
+      {showToolbox && <Toolbox />}
       <div ref={containerRef} className="flex flex-1 overflow-hidden relative">
         <div
           id="main-panel-container"
           className="flex overflow-hidden w-full h-full"
           data-export-area
         >
-          {showToolbox && (
-            <div data-no-export>
-              <Toolbox />
-            </div>
-          )}
-
           <div
             className="flex flex-1 overflow-hidden"
             data-export-region

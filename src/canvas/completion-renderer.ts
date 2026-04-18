@@ -33,11 +33,12 @@ export function renderCompletionSchematic(
   const pipeWidth = wellboreWidth * 0.55;
   const halfWellbore = wellboreWidth / 2;
 
-  drawSandstoneFormation(ctx, width, height, centerX, halfWellbore, theme);
+  const activeMarkers = showFormationMarkers && formationMarkers && formationMarkers.length > 0 ? formationMarkers : undefined;
+  drawSandstoneFormation(ctx, width, height, centerX, halfWellbore, theme, topDepth, pixelsPerMeter, activeMarkers);
   drawOpenHole(ctx, centerX, halfWellbore, height, theme);
 
-  if (showFormationMarkers && formationMarkers && formationMarkers.length > 0) {
-    drawFormationZones(ctx, width, height, centerX, halfWellbore, topDepth, pixelsPerMeter, formationMarkers, theme);
+  if (activeMarkers) {
+    drawFormationZones(ctx, width, height, centerX, halfWellbore, topDepth, pixelsPerMeter, activeMarkers, theme);
   }
 
   drawDepthGrid(ctx, width, height, topDepth, bottomDepth, pixelsPerMeter, theme);
@@ -81,7 +82,10 @@ function drawSandstoneFormation(
   height: number,
   centerX: number,
   halfWellbore: number,
-  theme: 'light' | 'dark'
+  theme: 'light' | 'dark',
+  topDepth?: number,
+  pixelsPerMeter?: number,
+  formationMarkers?: FormationMarker[]
 ) {
   const sandTop = theme === 'dark' ? '#3f2f1e' : '#d6bc8b';
   const sandMid = theme === 'dark' ? '#5a4226' : '#e6cf9c';
@@ -130,6 +134,25 @@ function drawSandstoneFormation(
         ctx.arc(rightX + x + ((y % 2) ? step / 2 : 0), y, 0.8, 0, Math.PI * 2);
         ctx.fill();
       }
+    }
+  }
+
+  // Per-formation color overlays on sand walls only (texture is preserved underneath)
+  if (formationMarkers && formationMarkers.length > 0 && topDepth !== undefined && pixelsPerMeter !== undefined) {
+    const palette = theme === 'dark' ? FORMATION_COLORS_DARK : FORMATION_COLORS_LIGHT;
+    for (let i = 0; i < formationMarkers.length; i++) {
+      const marker = formationMarkers[i];
+      const colors = palette[i % palette.length];
+      const yTop = (marker.topMD - topDepth) * pixelsPerMeter;
+      const nextMD = marker.bottomMD ?? (i + 1 < formationMarkers.length ? formationMarkers[i + 1].topMD : undefined);
+      const yBottom = nextMD !== undefined ? (nextMD - topDepth) * pixelsPerMeter : height;
+      const zoneH = yBottom - yTop;
+      if (zoneH <= 0) continue;
+      // Higher-opacity overlay so the color is visible through the texture
+      const overlayColor = colors.fill.replace(/[\d.]+\)$/, '0.28)');
+      ctx.fillStyle = overlayColor;
+      ctx.fillRect(leftX, yTop, leftW, zoneH);
+      ctx.fillRect(rightX, yTop, rightW, zoneH);
     }
   }
 
@@ -229,6 +252,27 @@ function drawDepthGrid(
   }
 }
 
+const FORMATION_COLORS_DARK = [
+  { fill: 'rgba(234, 179, 8, 0.10)',  line: 'rgba(234, 179, 8, 0.7)',  text: '#fbbf24' },
+  { fill: 'rgba(34, 197, 94, 0.10)',  line: 'rgba(34, 197, 94, 0.7)',  text: '#4ade80' },
+  { fill: 'rgba(59, 130, 246, 0.10)', line: 'rgba(59, 130, 246, 0.7)', text: '#60a5fa' },
+  { fill: 'rgba(168, 85, 247, 0.10)', line: 'rgba(168, 85, 247, 0.7)', text: '#c084fc' },
+  { fill: 'rgba(236, 72, 153, 0.10)', line: 'rgba(236, 72, 153, 0.7)', text: '#f472b6' },
+  { fill: 'rgba(20, 184, 166, 0.10)', line: 'rgba(20, 184, 166, 0.7)', text: '#2dd4bf' },
+  { fill: 'rgba(249, 115, 22, 0.10)', line: 'rgba(249, 115, 22, 0.7)', text: '#fb923c' },
+  { fill: 'rgba(99, 102, 241, 0.10)', line: 'rgba(99, 102, 241, 0.7)', text: '#818cf8' },
+];
+const FORMATION_COLORS_LIGHT = [
+  { fill: 'rgba(146, 64, 14, 0.08)',  line: 'rgba(146, 64, 14, 0.6)',  text: '#92400e' },
+  { fill: 'rgba(21, 128, 61, 0.08)',  line: 'rgba(21, 128, 61, 0.6)',  text: '#166534' },
+  { fill: 'rgba(29, 78, 216, 0.08)',  line: 'rgba(29, 78, 216, 0.6)',  text: '#1e40af' },
+  { fill: 'rgba(126, 34, 206, 0.08)', line: 'rgba(126, 34, 206, 0.6)', text: '#6b21a8' },
+  { fill: 'rgba(190, 24, 93, 0.08)',  line: 'rgba(190, 24, 93, 0.6)',  text: '#9d174d' },
+  { fill: 'rgba(13, 148, 136, 0.08)', line: 'rgba(13, 148, 136, 0.6)', text: '#115e59' },
+  { fill: 'rgba(194, 65, 12, 0.08)',  line: 'rgba(194, 65, 12, 0.6)',  text: '#9a3412' },
+  { fill: 'rgba(67, 56, 202, 0.08)',  line: 'rgba(67, 56, 202, 0.6)',  text: '#3730a3' },
+];
+
 function drawFormationZones(
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -240,38 +284,31 @@ function drawFormationZones(
   markers: FormationMarker[],
   theme: 'light' | 'dark'
 ) {
-  const lineColor = theme === 'dark' ? 'rgba(245, 158, 11, 0.7)' : 'rgba(180, 83, 9, 0.7)';
-  const textColor = theme === 'dark' ? '#fbbf24' : '#92400e';
-  const zoneBg = theme === 'dark' ? 'rgba(245, 158, 11, 0.06)' : 'rgba(180, 83, 9, 0.05)';
-
+  const palette = theme === 'dark' ? FORMATION_COLORS_DARK : FORMATION_COLORS_LIGHT;
   const leftW = centerX - halfWellbore;
+  const rightX = centerX + halfWellbore;
+  const rightW = width - rightX;
 
   for (let i = 0; i < markers.length; i++) {
     const marker = markers[i];
+    const colors = palette[i % palette.length];
     const yTop = (marker.topMD - topDepth) * pixelsPerMeter;
 
     const nextMD = marker.bottomMD ?? (i + 1 < markers.length ? markers[i + 1].topMD : undefined);
     const yBottom = nextMD !== undefined ? (nextMD - topDepth) * pixelsPerMeter : undefined;
 
-    // Zone fill in left formation wall
-    if (yBottom !== undefined && i % 2 === 0) {
-      ctx.fillStyle = zoneBg;
-      ctx.fillRect(0, yTop, leftW, yBottom - yTop);
-    }
-
     // Horizontal marker line across full width
-    drawHorizontalLine(ctx, yTop, 0, width, lineColor, 1);
+    drawHorizontalLine(ctx, yTop, 0, width, colors.line, 1.2);
 
-    // Formation name label in the left formation wall
+    // Formation name label in left wall
     ctx.save();
     ctx.font = 'bold 9px Inter, system-ui, sans-serif';
     const textW = ctx.measureText(marker.name).width;
     const labelX = Math.max(4, (leftW - textW) / 2);
     const labelY = yBottom !== undefined ? yTop + Math.min((yBottom - yTop) / 2, 14) : yTop + 12;
 
-    // Background pill for readability
     const pillPad = 3;
-    const pillBg = theme === 'dark' ? 'rgba(17, 24, 39, 0.75)' : 'rgba(255, 255, 255, 0.8)';
+    const pillBg = theme === 'dark' ? 'rgba(17, 24, 39, 0.8)' : 'rgba(255, 255, 255, 0.85)';
     ctx.fillStyle = pillBg;
     ctx.beginPath();
     const rx = labelX - pillPad;
@@ -290,8 +327,20 @@ function drawFormationZones(
     ctx.quadraticCurveTo(rx, ry, rx + r, ry);
     ctx.fill();
 
+    // Color bar on left edge of pill
+    ctx.fillStyle = colors.line;
+    ctx.beginPath();
+    ctx.moveTo(rx, ry + r);
+    ctx.lineTo(rx + 2, ry + r);
+    ctx.lineTo(rx + 2, ry + rh - r);
+    ctx.lineTo(rx, ry + rh - r);
+    ctx.quadraticCurveTo(rx, ry + rh, rx, ry + rh - r);
+    ctx.lineTo(rx, ry + r);
+    ctx.quadraticCurveTo(rx, ry, rx, ry + r);
+    ctx.fill();
+
     drawText(ctx, marker.name, labelX, labelY, {
-      color: textColor,
+      color: colors.text,
       font: 'bold 9px Inter, system-ui, sans-serif',
       align: 'left',
       baseline: 'middle',

@@ -31,7 +31,7 @@ const initialTheme: Theme = (() => {
   if (typeof window === 'undefined') return 'dark';
   const stored = localStorage.getItem('complete-it:theme');
   if (stored === 'light' || stored === 'dark') return stored;
-  return 'dark';
+  return 'light';
 })();
 
 applyThemeToDocument(initialTheme);

@@ -11,12 +11,26 @@ export function renderDepthTrack(
   depthLabel: string = 'MD',
   labelFormatter?: (md: number) => number,
   formationMarkers?: FormationMarker[],
-  showFormationMarkers?: boolean
+  showFormationMarkers?: boolean,
+  secondaryLabel?: string,
+  secondaryFormatter?: (md: number) => number
 ) {
   const theme = getCanvasTheme();
-  // Background
   ctx.fillStyle = theme.bgDeep;
   ctx.fillRect(0, 0, width, height);
+
+  const hasDual = !!secondaryLabel && !!secondaryFormatter;
+  const midX = hasDual ? Math.floor(width / 2) : width;
+
+  // Column divider
+  if (hasDual) {
+    ctx.strokeStyle = theme.gridMajor;
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(midX + 0.5, 0);
+    ctx.lineTo(midX + 0.5, height);
+    ctx.stroke();
+  }
 
   // Right border
   ctx.strokeStyle = theme.gridMajor;
@@ -28,42 +42,49 @@ export function renderDepthTrack(
 
   const depthRange = bottomDepth - topDepth;
   const gridSpacing = calculateDepthGridSpacing(depthRange);
-
   const firstGridDepth = Math.ceil(topDepth / gridSpacing) * gridSpacing;
+  const fontSize = hasDual ? '8px' : '10px';
 
   for (let depth = firstGridDepth; depth <= bottomDepth; depth += gridSpacing) {
     const y = (depth - topDepth) * pixelsPerMeter;
     const isMajor = Math.abs(depth % (gridSpacing * 5)) < 0.01 || gridSpacing >= 10;
 
-    // Tick mark
-    const tickLength = isMajor ? 8 : 4;
-    drawHorizontalLine(ctx, y, width - tickLength, width, theme.textMuted, isMajor ? 1 : 0.5);
+    const tickLength = isMajor ? 6 : 3;
+    drawHorizontalLine(ctx, y, midX - tickLength, midX, theme.textMuted, isMajor ? 0.8 : 0.4);
 
-    // Depth label for major ticks
     if (isMajor) {
       const displayed = labelFormatter ? labelFormatter(depth) : depth;
-      drawText(ctx, displayed.toFixed(displayed % 1 === 0 ? 0 : 1), width - 12, y, {
+      drawText(ctx, displayed.toFixed(displayed % 1 === 0 ? 0 : 1), midX - 4, y, {
         color: theme.textPrimary,
-        font: '10px Inter, system-ui, sans-serif',
+        font: `${fontSize} Inter, system-ui, sans-serif`,
+        align: 'right',
+        baseline: 'middle',
+      });
+    }
+
+    if (hasDual && isMajor) {
+      drawHorizontalLine(ctx, y, width - tickLength, width, theme.textMuted, isMajor ? 0.8 : 0.4);
+      const secVal = secondaryFormatter!(depth);
+      drawText(ctx, secVal.toFixed(secVal % 1 === 0 ? 0 : 1), width - 4, y, {
+        color: theme.textPrimary,
+        font: `${fontSize} Inter, system-ui, sans-serif`,
         align: 'right',
         baseline: 'middle',
       });
     }
   }
 
-  // Header
-  drawText(ctx, depthLabel, width / 2, 6, {
-    color: theme.textMuted,
-    font: 'bold 9px Inter, system-ui, sans-serif',
-    align: 'center',
-    baseline: 'top',
-  });
-  drawText(ctx, '(m)', width / 2, 16, {
-    color: theme.textMuted,
-    font: '8px Inter, system-ui, sans-serif',
-    align: 'center',
-    baseline: 'top',
-  });
+  // Headers
+  const headerFont = hasDual ? 'bold 7px Inter, system-ui, sans-serif' : 'bold 9px Inter, system-ui, sans-serif';
+  const subFont = hasDual ? '6px Inter, system-ui, sans-serif' : '8px Inter, system-ui, sans-serif';
+
+  drawText(ctx, depthLabel, midX / 2, 5, { color: theme.textMuted, font: headerFont, align: 'center', baseline: 'top' });
+  drawText(ctx, '(m)', midX / 2, hasDual ? 13 : 16, { color: theme.textMuted, font: subFont, align: 'center', baseline: 'top' });
+
+  if (hasDual) {
+    drawText(ctx, secondaryLabel!, midX + (width - midX) / 2, 5, { color: theme.textMuted, font: headerFont, align: 'center', baseline: 'top' });
+    drawText(ctx, '(m)', midX + (width - midX) / 2, 13, { color: theme.textMuted, font: subFont, align: 'center', baseline: 'top' });
+  }
 
   // Formation markers
   if (showFormationMarkers && formationMarkers && formationMarkers.length > 0) {
@@ -73,10 +94,10 @@ export function renderDepthTrack(
       const y = (marker.topMD - topDepth) * pixelsPerMeter;
       if (y < -20 || y > height + 20) continue;
       drawHorizontalLine(ctx, y, 0, width, markerColor, 1.2);
-      drawText(ctx, marker.name, 4, y - 3, {
+      drawText(ctx, marker.name, width - 4, y - 3, {
         color: markerTextColor,
-        font: 'bold 8px Inter, system-ui, sans-serif',
-        align: 'left',
+        font: 'bold 7px Inter, system-ui, sans-serif',
+        align: 'right',
         baseline: 'bottom',
       });
     }

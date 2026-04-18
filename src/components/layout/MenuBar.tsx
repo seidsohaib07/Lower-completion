@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { useLogDataStore, useCompletionStore, useUIStore, useViewportStore } from '../../stores';
+import { useLogDataStore, useCompletionStore, useUIStore, useViewportStore, useSelectionStore } from '../../stores';
 import { parseExcelCPILogs, parseExcelTally } from '../../utils/excel-import';
 import { exportTallyToExcel } from '../../utils/excel-export';
 import { exportSchematicImage, exportSchematicPDF } from '../../utils/image-export';
@@ -64,6 +64,10 @@ function useMenuBar() {
   const zoomOut          = useViewportStore((s) => s.zoomOut);
   const setActiveTool    = useUIStore((s) => s.setActiveTool);
   const activeTool       = useUIStore((s) => s.activeTool);
+  const selection        = useSelectionStore((s) => s.selection);
+  const clearSelection   = useSelectionStore((s) => s.clearSelection);
+  const removeEquipment  = useCompletionStore((s) => s.removeEquipment);
+  const duplicateEquipment = useCompletionStore((s) => s.duplicateEquipment);
 
   const addFormationMarkers = useLogDataStore((s) => s.addFormationMarkers);
   const showFormationMarkers = useLogDataStore((s) => s.showFormationMarkers);
@@ -209,7 +213,29 @@ function useMenuBar() {
     {
       label: 'Edit',
       items: [
-        { label: `${activeTool === 'select' ? '✓ ' : ''}Select / Move`, onClick: () => setActiveTool('select'), shortcut: 'S' },
+        { label: `${activeTool === 'select' ? '✓ ' : ''}Select`, onClick: () => setActiveTool('select'), shortcut: 'S' },
+        { divider: true, label: '' },
+        {
+          label: 'Remove Selected',
+          disabled: selection.type !== 'equipment' || !selection.equipmentId,
+          onClick: () => {
+            if (selection.type === 'equipment' && selection.equipmentId) {
+              removeEquipment(selection.equipmentId);
+              clearSelection();
+            }
+          },
+          shortcut: 'Del',
+        },
+        {
+          label: 'Duplicate Selected',
+          disabled: selection.type !== 'equipment' || !selection.equipmentId,
+          onClick: () => {
+            if (selection.type === 'equipment' && selection.equipmentId) {
+              duplicateEquipment(selection.equipmentId);
+            }
+          },
+          shortcut: 'Ctrl+D',
+        },
       ],
     },
     {
@@ -225,7 +251,7 @@ function useMenuBar() {
       items: [
         { label: `${showToolbox ? '✓ ' : ''}Toolbox`, onClick: toggleToolbox },
         { label: `${showProperties ? '✓ ' : ''}Properties Panel`, onClick: toggleProperties },
-        { label: `${showTally ? '✓ ' : ''}Tally Table`, onClick: toggleTally },
+        { label: `${showTally ? '✓ ' : ''}Tally Table (Beta)`, onClick: toggleTally },
         { label: `${showFormationMarkers ? '✓ ' : ''}Formation Markers`, onClick: toggleFormationMarkers, disabled: formationMarkers.length === 0 },
         { divider: true, label: '' },
         { label: orientation === 'vertical' ? '⇋ Switch to Horizontal' : '⇵ Switch to Vertical', onClick: toggleOrientation },
@@ -275,33 +301,54 @@ export function MenuBar() {
 
       <nav
         ref={barRef}
-        className="flex items-center h-8 px-2 gap-0.5 select-none shrink-0 border-b"
+        className="flex items-center h-9 px-3 select-none shrink-0 border-b"
         style={{
-          background: 'var(--color-surface-deep)',
+          background: 'linear-gradient(180deg, var(--color-surface-deep) 0%, var(--color-surface) 100%)',
           borderColor: 'var(--color-border)',
         }}
       >
         {/* Logo */}
-        <span className="text-[11px] font-bold tracking-tight mr-4 px-1.5" style={{ color: 'var(--color-accent)' }}>
-          CompleteIt
-        </span>
+        <div className="flex items-center gap-2 mr-5">
+          <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+            <rect x="2" y="2" width="28" height="28" rx="6" fill="url(#logo-grad)" />
+            <path d="M10 8 L10 24 M22 8 L22 24" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" />
+            <rect x="8" y="10" width="16" height="3" rx="1" fill="rgba(255,255,255,0.9)" />
+            <rect x="7" y="15" width="18" height="2.5" rx="1" fill="#fbbf24" />
+            <rect x="8" y="19.5" width="16" height="3" rx="1" fill="rgba(255,255,255,0.9)" />
+            <defs>
+              <linearGradient id="logo-grad" x1="2" y1="2" x2="30" y2="30">
+                <stop offset="0%" stopColor="#1e3a5f" />
+                <stop offset="100%" stopColor="#0f172a" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <span className="text-[13px] font-bold tracking-tight" style={{ color: 'var(--color-accent)' }}>
+            Compl<span style={{ color: 'var(--color-text)' }}>Eat</span> it
+          </span>
+        </div>
 
         {/* Well name badge */}
         {logData && (
           <span
-            className="text-[10px] mr-4 px-2.5 py-0.5 rounded"
+            className="text-[10px] mr-5 px-2.5 py-0.5 rounded"
             style={{ background: 'var(--color-surface)', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)' }}
           >
             {logData.wellName}
           </span>
         )}
 
-        {/* Menu bar items — gap-1 provides spacing between each menu label */}
-        <div className="flex items-center gap-1">
-          {menus.map((menu) => (
-            <div key={menu.label} className="relative">
+        {/* Menu bar items with luxurious dividers */}
+        <div className="flex items-center">
+          {menus.map((menu, idx) => (
+            <div key={menu.label} className="flex items-center">
+              {idx > 0 && (
+                <div className="flex items-center">
+                  <span className="text-[11px] px-1.5" style={{ color: 'var(--color-border)' }}>|</span>
+                </div>
+              )}
+              <div className="relative">
               <button
-                className="px-3 py-1 text-[11px] rounded transition-colors"
+                className="px-4 py-1 text-[11px] rounded transition-colors font-medium tracking-wide"
                 style={{
                   color: openMenu === menu.label ? 'var(--color-text)' : 'var(--color-text-muted)',
                   background: openMenu === menu.label ? 'var(--color-surface-light)' : 'transparent',
@@ -379,6 +426,7 @@ export function MenuBar() {
                   })}
                 </div>
               )}
+            </div>
             </div>
           ))}
         </div>
