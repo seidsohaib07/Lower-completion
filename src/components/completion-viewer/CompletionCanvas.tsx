@@ -2,7 +2,7 @@ import { useRef, useEffect, useCallback, useState } from 'react';
 import { useCanvasRenderer } from '../../hooks/use-canvas-renderer';
 import { renderCompletionSchematic, renderSelectionOverlay } from '../../canvas/completion-renderer';
 import { renderDragOverlay } from '../../canvas/selection-overlay';
-import { useViewportStore, useCompletionStore, useSelectionStore, useUIStore } from '../../stores';
+import { useViewportStore, useCompletionStore, useSelectionStore, useUIStore, useLogDataStore } from '../../stores';
 import { useDragSelect } from '../../hooks/use-drag-select';
 import { hitTestEquipment } from '../../utils/geometry';
 import { toolToEquipmentType } from '../../types';
@@ -28,6 +28,8 @@ export function CompletionCanvas() {
   const drag = useSelectionStore((s) => s.drag);
   const activeTool = useUIStore((s) => s.activeTool);
   const theme = useUIStore((s) => s.theme);
+  const formationMarkers = useLogDataStore((s) => s.formationMarkers);
+  const showFormationMarkers = useLogDataStore((s) => s.showFormationMarkers);
   const { onMouseDown, onMouseMove, onMouseUp } = useDragSelect();
 
   const [contextMenu, setContextMenu] = useState<{
@@ -60,7 +62,7 @@ export function CompletionCanvas() {
       (selection.type === 'equipment' ? selection.equipmentId ?? null : null);
 
     requestRender((ctx, w, h) => {
-      renderCompletionSchematic(ctx, w, h, topDepth, bottomDepth, pixelsPerMeter, items, selectedId, undefined, theme);
+      renderCompletionSchematic(ctx, w, h, topDepth, bottomDepth, pixelsPerMeter, items, selectedId, undefined, theme, formationMarkers, showFormationMarkers);
 
       if (selection.type === 'depth_interval' && selection.topMD !== undefined && selection.bottomMD !== undefined) {
         renderSelectionOverlay(ctx, w, topDepth, pixelsPerMeter, selection.topMD, selection.bottomMD);
@@ -93,7 +95,7 @@ export function CompletionCanvas() {
         ctx.setLineDash([]);
       }
     });
-  }, [width, height, topDepth, bottomDepth, pixelsPerMeter, items, selection, drag, requestRender, moveState, dropIndicator, theme]);
+  }, [width, height, topDepth, bottomDepth, pixelsPerMeter, items, selection, drag, requestRender, moveState, dropIndicator, theme, formationMarkers, showFormationMarkers]);
 
   const depthAtMouse = useCallback(
     (e: React.MouseEvent | React.DragEvent) => {

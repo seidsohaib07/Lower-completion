@@ -10,6 +10,7 @@ export interface CanvasTheme {
   gridMajor: string;     // major grid line
   gridMinor: string;     // minor grid line
   border: string;        // track / panel border
+  isDark: boolean;
 }
 
 /**
@@ -33,6 +34,7 @@ export function getCanvasTheme(): CanvasTheme {
       gridMajor: '#94a3b8',
       gridMinor: '#cbd5e1',
       border: v('--color-border', '#cbd5e1'),
+      isDark: false,
     };
   }
   return {
@@ -43,6 +45,7 @@ export function getCanvasTheme(): CanvasTheme {
     gridMajor: '#475569',
     gridMinor: '#1e293b',
     border: v('--color-border', '#334155'),
+    isDark: true,
   };
 }
 
@@ -54,6 +57,7 @@ const DARK_THEME: CanvasTheme = {
   gridMajor: '#475569',
   gridMinor: '#1e293b',
   border: '#334155',
+  isDark: true,
 };
 
 export function clearCanvas(ctx: CanvasRenderingContext2D, width: number, height: number, bgColor: string = '#1a1a2e') {

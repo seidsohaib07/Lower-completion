@@ -1,4 +1,5 @@
 import type { CompletionEquipment } from '../types';
+import type { FormationMarker } from '../stores/log-data-store';
 import { SHAPE_DRAWERS } from './equipment-shapes';
 import { drawText, drawHorizontalLine, drawDashedLine } from './render-utils';
 import { EQUIPMENT_COLORS, DEFAULT_OPEN_HOLE_DIAMETER } from '../constants';
@@ -18,7 +19,9 @@ export function renderCompletionSchematic(
   items: CompletionEquipment[],
   selectedId: string | null,
   _openHoleDiameter: number = DEFAULT_OPEN_HOLE_DIAMETER,
-  theme: 'light' | 'dark' = 'dark'
+  theme: 'light' | 'dark' = 'dark',
+  formationMarkers?: FormationMarker[],
+  showFormationMarkers?: boolean
 ) {
   // Background canvas wash (keeps the theme consistent if the schematic
   // doesn't fully cover because of DPI rounding).
@@ -32,6 +35,11 @@ export function renderCompletionSchematic(
 
   drawSandstoneFormation(ctx, width, height, centerX, halfWellbore, theme);
   drawOpenHole(ctx, centerX, halfWellbore, height, theme);
+
+  if (showFormationMarkers && formationMarkers && formationMarkers.length > 0) {
+    drawFormationZones(ctx, width, height, centerX, halfWellbore, topDepth, pixelsPerMeter, formationMarkers, theme);
+  }
+
   drawDepthGrid(ctx, width, height, topDepth, bottomDepth, pixelsPerMeter, theme);
 
   for (const item of items) {
@@ -218,6 +226,77 @@ function drawDepthGrid(
   for (let depth = firstDepth; depth <= bottomDepth; depth += gridSpacing) {
     const y = (depth - topDepth) * pixelsPerMeter;
     drawHorizontalLine(ctx, y, 0, width, gridColor, 0.3);
+  }
+}
+
+function drawFormationZones(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  _height: number,
+  centerX: number,
+  halfWellbore: number,
+  topDepth: number,
+  pixelsPerMeter: number,
+  markers: FormationMarker[],
+  theme: 'light' | 'dark'
+) {
+  const lineColor = theme === 'dark' ? 'rgba(245, 158, 11, 0.7)' : 'rgba(180, 83, 9, 0.7)';
+  const textColor = theme === 'dark' ? '#fbbf24' : '#92400e';
+  const zoneBg = theme === 'dark' ? 'rgba(245, 158, 11, 0.06)' : 'rgba(180, 83, 9, 0.05)';
+
+  const leftW = centerX - halfWellbore;
+
+  for (let i = 0; i < markers.length; i++) {
+    const marker = markers[i];
+    const yTop = (marker.topMD - topDepth) * pixelsPerMeter;
+
+    const nextMD = marker.bottomMD ?? (i + 1 < markers.length ? markers[i + 1].topMD : undefined);
+    const yBottom = nextMD !== undefined ? (nextMD - topDepth) * pixelsPerMeter : undefined;
+
+    // Zone fill in left formation wall
+    if (yBottom !== undefined && i % 2 === 0) {
+      ctx.fillStyle = zoneBg;
+      ctx.fillRect(0, yTop, leftW, yBottom - yTop);
+    }
+
+    // Horizontal marker line across full width
+    drawHorizontalLine(ctx, yTop, 0, width, lineColor, 1);
+
+    // Formation name label in the left formation wall
+    ctx.save();
+    ctx.font = 'bold 9px Inter, system-ui, sans-serif';
+    const textW = ctx.measureText(marker.name).width;
+    const labelX = Math.max(4, (leftW - textW) / 2);
+    const labelY = yBottom !== undefined ? yTop + Math.min((yBottom - yTop) / 2, 14) : yTop + 12;
+
+    // Background pill for readability
+    const pillPad = 3;
+    const pillBg = theme === 'dark' ? 'rgba(17, 24, 39, 0.75)' : 'rgba(255, 255, 255, 0.8)';
+    ctx.fillStyle = pillBg;
+    ctx.beginPath();
+    const rx = labelX - pillPad;
+    const ry = labelY - 8;
+    const rw = textW + pillPad * 2;
+    const rh = 12;
+    const r = 3;
+    ctx.moveTo(rx + r, ry);
+    ctx.lineTo(rx + rw - r, ry);
+    ctx.quadraticCurveTo(rx + rw, ry, rx + rw, ry + r);
+    ctx.lineTo(rx + rw, ry + rh - r);
+    ctx.quadraticCurveTo(rx + rw, ry + rh, rx + rw - r, ry + rh);
+    ctx.lineTo(rx + r, ry + rh);
+    ctx.quadraticCurveTo(rx, ry + rh, rx, ry + rh - r);
+    ctx.lineTo(rx, ry + r);
+    ctx.quadraticCurveTo(rx, ry, rx + r, ry);
+    ctx.fill();
+
+    drawText(ctx, marker.name, labelX, labelY, {
+      color: textColor,
+      font: 'bold 9px Inter, system-ui, sans-serif',
+      align: 'left',
+      baseline: 'middle',
+    });
+    ctx.restore();
   }
 }
 

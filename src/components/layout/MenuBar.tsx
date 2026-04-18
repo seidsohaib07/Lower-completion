@@ -66,6 +66,9 @@ function useMenuBar() {
   const activeTool       = useUIStore((s) => s.activeTool);
 
   const addFormationMarkers = useLogDataStore((s) => s.addFormationMarkers);
+  const showFormationMarkers = useLogDataStore((s) => s.showFormationMarkers);
+  const toggleFormationMarkers = useLogDataStore((s) => s.toggleFormationMarkers);
+  const formationMarkers = useLogDataStore((s) => s.formationMarkers);
 
   const cpiInputRef      = useRef<HTMLInputElement>(null);
   const tallyInputRef    = useRef<HTMLInputElement>(null);
@@ -223,6 +226,7 @@ function useMenuBar() {
         { label: `${showToolbox ? '✓ ' : ''}Toolbox`, onClick: toggleToolbox },
         { label: `${showProperties ? '✓ ' : ''}Properties Panel`, onClick: toggleProperties },
         { label: `${showTally ? '✓ ' : ''}Tally Table`, onClick: toggleTally },
+        { label: `${showFormationMarkers ? '✓ ' : ''}Formation Markers`, onClick: toggleFormationMarkers, disabled: formationMarkers.length === 0 },
         { divider: true, label: '' },
         { label: orientation === 'vertical' ? '⇋ Switch to Horizontal' : '⇵ Switch to Vertical', onClick: toggleOrientation },
         { divider: true, label: '' },
