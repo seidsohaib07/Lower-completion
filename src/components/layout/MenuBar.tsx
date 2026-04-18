@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { useLogDataStore, useCompletionStore, useUIStore, useViewportStore } from '../../stores';
+import { useLogDataStore, useCompletionStore, useUIStore, useViewportStore, useSelectionStore } from '../../stores';
 import { parseExcelCPILogs, parseExcelTally } from '../../utils/excel-import';
 import { exportTallyToExcel } from '../../utils/excel-export';
 import { exportSchematicImage, exportSchematicPDF } from '../../utils/image-export';
@@ -64,6 +64,10 @@ function useMenuBar() {
   const zoomOut          = useViewportStore((s) => s.zoomOut);
   const setActiveTool    = useUIStore((s) => s.setActiveTool);
   const activeTool       = useUIStore((s) => s.activeTool);
+  const selection        = useSelectionStore((s) => s.selection);
+  const clearSelection   = useSelectionStore((s) => s.clearSelection);
+  const removeEquipment  = useCompletionStore((s) => s.removeEquipment);
+  const duplicateEquipment = useCompletionStore((s) => s.duplicateEquipment);
 
   const addFormationMarkers = useLogDataStore((s) => s.addFormationMarkers);
   const showFormationMarkers = useLogDataStore((s) => s.showFormationMarkers);
@@ -209,7 +213,29 @@ function useMenuBar() {
     {
       label: 'Edit',
       items: [
-        { label: `${activeTool === 'select' ? '✓ ' : ''}Select / Move`, onClick: () => setActiveTool('select'), shortcut: 'S' },
+        { label: `${activeTool === 'select' ? '✓ ' : ''}Select`, onClick: () => setActiveTool('select'), shortcut: 'S' },
+        { divider: true, label: '' },
+        {
+          label: 'Remove Selected',
+          disabled: selection.type !== 'equipment' || !selection.equipmentId,
+          onClick: () => {
+            if (selection.type === 'equipment' && selection.equipmentId) {
+              removeEquipment(selection.equipmentId);
+              clearSelection();
+            }
+          },
+          shortcut: 'Del',
+        },
+        {
+          label: 'Duplicate Selected',
+          disabled: selection.type !== 'equipment' || !selection.equipmentId,
+          onClick: () => {
+            if (selection.type === 'equipment' && selection.equipmentId) {
+              duplicateEquipment(selection.equipmentId);
+            }
+          },
+          shortcut: 'Ctrl+D',
+        },
       ],
     },
     {
@@ -225,7 +251,7 @@ function useMenuBar() {
       items: [
         { label: `${showToolbox ? '✓ ' : ''}Toolbox`, onClick: toggleToolbox },
         { label: `${showProperties ? '✓ ' : ''}Properties Panel`, onClick: toggleProperties },
-        { label: `${showTally ? '✓ ' : ''}Tally Table  \u03B2`, onClick: toggleTally },
+        { label: `${showTally ? '✓ ' : ''}Tally Table (Beta)`, onClick: toggleTally },
         { label: `${showFormationMarkers ? '✓ ' : ''}Formation Markers`, onClick: toggleFormationMarkers, disabled: formationMarkers.length === 0 },
         { divider: true, label: '' },
         { label: orientation === 'vertical' ? '⇋ Switch to Horizontal' : '⇵ Switch to Vertical', onClick: toggleOrientation },
@@ -316,11 +342,13 @@ export function MenuBar() {
           {menus.map((menu, idx) => (
             <div key={menu.label} className="flex items-center">
               {idx > 0 && (
-                <div className="mx-1 h-4" style={{ width: 1, background: 'var(--color-border)' }} />
+                <div className="flex items-center">
+                  <span className="text-[11px] px-1.5" style={{ color: 'var(--color-border)' }}>|</span>
+                </div>
               )}
               <div className="relative">
               <button
-                className="px-3.5 py-1 text-[11px] rounded transition-colors font-medium tracking-wide"
+                className="px-4 py-1 text-[11px] rounded transition-colors font-medium tracking-wide"
                 style={{
                   color: openMenu === menu.label ? 'var(--color-text)' : 'var(--color-text-muted)',
                   background: openMenu === menu.label ? 'var(--color-surface-light)' : 'transparent',

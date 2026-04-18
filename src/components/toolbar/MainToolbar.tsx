@@ -40,17 +40,26 @@ export function MainToolbar() {
         borderColor: 'var(--color-border)',
       }}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <button
           onClick={() => setActiveTool('select')}
-          className="px-2 py-0.5 text-[10px] font-medium rounded transition-colors"
+          title="Select (S)"
+          className="w-7 h-7 flex items-center justify-center rounded transition-all"
           style={{
-            background:
-              activeTool === 'select' ? 'var(--color-primary)' : 'var(--color-surface-light)',
-            color: 'var(--color-text)',
+            background: activeTool === 'select' ? 'var(--color-primary)' : 'var(--color-surface-light)',
+            color: activeTool === 'select' ? '#fff' : 'var(--color-text-muted)',
+            border: '1px solid var(--color-border)',
           }}
         >
-          Select / Move
+          <svg viewBox="0 0 24 24" width={14} height={14} fill="none">
+            <path
+              d="M5 3l14 9-7 1.5L9 21z"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinejoin="round"
+              fill={activeTool === 'select' ? 'currentColor' : 'none'}
+            />
+          </svg>
         </button>
       </div>
 

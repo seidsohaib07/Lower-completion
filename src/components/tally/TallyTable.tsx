@@ -69,10 +69,10 @@ export function TallyTable() {
             Completion Tally
           </span>
           <span
-            className="text-[8px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full"
-            style={{ background: 'var(--color-accent)', color: '#000' }}
+            className="text-[9px] font-medium italic"
+            style={{ color: 'var(--color-text-muted)' }}
           >
-            &#946; Beta
+            (Beta)
           </span>
         </div>
         <div className="flex items-center gap-2">
