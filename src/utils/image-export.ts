@@ -1,11 +1,29 @@
 import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 
+function getExportBackground(): string {
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  return isLight ? '#ffffff' : '#0f172a';
+}
+
 /**
- * Export the schematic area as a PNG image.
+ * Find the element that should be captured. Prefers a [data-export-region]
+ * (logs + schematic only, without the toolbox) and falls back to the
+ * legacy [data-export-area] for backwards compatibility.
+ */
+function findExportTarget(): HTMLElement | null {
+  return (
+    (document.querySelector('[data-export-region]') as HTMLElement | null) ??
+    (document.querySelector('[data-export-area]') as HTMLElement | null)
+  );
+}
+
+/**
+ * Export the schematic area (logs + schematic) as a PNG image.
+ * The toolbox and properties panel are excluded.
  */
 export async function exportSchematicImage() {
-  const exportArea = document.querySelector('[data-export-area]') as HTMLElement;
+  const exportArea = findExportTarget();
   if (!exportArea) {
     alert('No schematic area found to export');
     return;
@@ -13,8 +31,14 @@ export async function exportSchematicImage() {
 
   try {
     const dataUrl = await toPng(exportArea, {
-      backgroundColor: '#111827',
+      backgroundColor: getExportBackground(),
       pixelRatio: 2,
+      filter: (node) => {
+        // Strip anything explicitly marked as not-for-export.
+        if (!(node instanceof HTMLElement)) return true;
+        if (node.hasAttribute('data-no-export')) return false;
+        return true;
+      },
     });
 
     const link = document.createElement('a');
@@ -31,7 +55,7 @@ export async function exportSchematicImage() {
  * Export the schematic area as a PDF document.
  */
 export async function exportSchematicPDF() {
-  const exportArea = document.querySelector('[data-export-area]') as HTMLElement;
+  const exportArea = findExportTarget();
   if (!exportArea) {
     alert('No schematic area found to export');
     return;
@@ -39,8 +63,13 @@ export async function exportSchematicPDF() {
 
   try {
     const dataUrl = await toPng(exportArea, {
-      backgroundColor: '#111827',
+      backgroundColor: getExportBackground(),
       pixelRatio: 2,
+      filter: (node) => {
+        if (!(node instanceof HTMLElement)) return true;
+        if (node.hasAttribute('data-no-export')) return false;
+        return true;
+      },
     });
 
     const img = new Image();
@@ -62,15 +91,13 @@ export async function exportSchematicPDF() {
     const pageHeight = pdf.internal.pageSize.getHeight();
     const margin = 10;
     const availableWidth = pageWidth - margin * 2;
-    const availableHeight = pageHeight - margin * 2 - 15; // Reserve space for header
+    const availableHeight = pageHeight - margin * 2 - 15;
 
-    // Header
     pdf.setFontSize(12);
-    pdf.text('Complete It - Lower Completion Schematic', margin, margin + 5);
+    pdf.text('Complete It — Lower Completion Schematic', margin, margin + 5);
     pdf.setFontSize(8);
     pdf.text(`Date: ${new Date().toLocaleDateString()}`, margin, margin + 11);
 
-    // Scale image to fit
     const scale = Math.min(availableWidth / img.width, availableHeight / img.height);
     const imgWidth = img.width * scale;
     const imgHeight = img.height * scale;

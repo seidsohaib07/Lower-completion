@@ -385,21 +385,47 @@ export const useCompletionStore = create<CompletionState>((set, get) => ({
     if (!target || target.type === 'blank_pipe') return;
 
     const length = target.length;
-    const newBottomMD = newTopMD + length;
+    // Compute hard bounds: the new interval cannot overlap any OTHER
+    // non-blank equipment. It can only slide freely through blank pipe
+    // sections. Find the nearest obstacle above and below.
+    const obstacles = completionString.items.filter(
+      (i) => i.id !== id && i.type !== 'blank_pipe'
+    );
+    const above = obstacles
+      .filter((o) => o.bottomMD <= target.topMD + 0.001)
+      .reduce<typeof obstacles[number] | null>((acc, o) => {
+        if (!acc || o.bottomMD > acc.bottomMD) return o;
+        return acc;
+      }, null);
+    const below = obstacles
+      .filter((o) => o.topMD >= target.bottomMD - 0.001)
+      .reduce<typeof obstacles[number] | null>((acc, o) => {
+        if (!acc || o.topMD < acc.topMD) return o;
+        return acc;
+      }, null);
+    // Absolute clamp window for the target's top:
+    const stringTop = completionString.items[0]?.topMD ?? target.topMD;
+    const stringBottom =
+      completionString.items[completionString.items.length - 1]?.bottomMD ??
+      target.bottomMD;
+    const minTop = above ? above.bottomMD : stringTop;
+    const maxTop = below ? below.topMD - length : stringBottom - length;
 
-    // Remove the equipment from its old location (replace with blank pipe)
+    const clampedTop = Math.max(minTop, Math.min(maxTop, newTopMD));
+    const clampedBottom = clampedTop + length;
+
+    // Replace the old location with blank pipe, remove the target.
     const withoutTarget = completionString.items
       .filter((i) => i.id !== id)
       .concat(createBlankPipe(target.topMD, target.bottomMD));
 
-    // Split around new location
-    const kept = splitAroundInterval(withoutTarget, newTopMD, newBottomMD);
+    // Split (blank pipe only, by construction) around the new window.
+    const kept = splitAroundInterval(withoutTarget, clampedTop, clampedBottom);
 
-    // Create moved copy (preserve type-specific fields)
     const moved: CompletionEquipment = {
       ...target,
-      topMD: newTopMD,
-      bottomMD: newBottomMD,
+      topMD: clampedTop,
+      bottomMD: clampedBottom,
       length,
     } as CompletionEquipment;
     kept.push(moved);

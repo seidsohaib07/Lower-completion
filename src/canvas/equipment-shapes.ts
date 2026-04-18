@@ -49,22 +49,68 @@ function pipeColor(isSelected: boolean, base: string) {
 
 // --- Shared helpers --------------------------------------------------------
 
-function drawInnerPipeBore(
+/** Horizontal metallic gradient: dark edge → bright centre → dark edge */
+function metalGradH(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  w: number,
+  dark: string,
+  light: string
+) {
+  const g = ctx.createLinearGradient(x, 0, x + w, 0);
+  g.addColorStop(0,    dark);
+  g.addColorStop(0.25, light);
+  g.addColorStop(0.5,  light);
+  g.addColorStop(0.75, hex(light, 0.6));
+  g.addColorStop(1,    dark);
+  return g;
+}
+
+/** Vertical gradient with a mid-highlight (for rubber/body elements). */
+function gradientVertical(
+  ctx: CanvasRenderingContext2D,
+  yTop: number,
+  yBottom: number,
+  c1: string,
+  c2: string
+) {
+  const g = ctx.createLinearGradient(0, yTop, 0, yBottom);
+  g.addColorStop(0,   c1);
+  g.addColorStop(0.5, c2);
+  g.addColorStop(1,   c1);
+  return g;
+}
+
+/**
+ * Draw a metallic pipe segment with a horizontal shine gradient and thin
+ * wall lines. This is the shared core for blank pipe, casing, tubing, etc.
+ */
+function drawMetallicPipe(
   ctx: CanvasRenderingContext2D,
   centerX: number,
   yTop: number,
   yBottom: number,
-  pipeWidth: number,
-  color: string
+  wallWidth: number,           // total outer width of the pipe
+  wallThickness: number,       // thickness of each wall (px)
+  dark: string,
+  light: string
 ) {
-  const halfPipe = pipeWidth / 2;
-  // Pipe walls (two parallel lines)
-  ctx.fillStyle = color;
-  ctx.fillRect(centerX - halfPipe, yTop, 2.5, yBottom - yTop);
-  ctx.fillRect(centerX + halfPipe - 2.5, yTop, 2.5, yBottom - yTop);
-  // Hollow bore fill
-  ctx.fillStyle = hex(color, 0.06);
-  ctx.fillRect(centerX - halfPipe + 2.5, yTop, pipeWidth - 5, yBottom - yTop);
+  const halfW = wallWidth / 2;
+  const h = yBottom - yTop;
+
+  // Left wall
+  const gL = metalGradH(ctx, centerX - halfW, wallThickness, dark, light);
+  ctx.fillStyle = gL;
+  ctx.fillRect(centerX - halfW, yTop, wallThickness, h);
+
+  // Right wall
+  const gR = metalGradH(ctx, centerX + halfW - wallThickness, wallThickness, dark, light);
+  ctx.fillStyle = gR;
+  ctx.fillRect(centerX + halfW - wallThickness, yTop, wallThickness, h);
+
+  // Bore (dark fluid column)
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(centerX - halfW + wallThickness, yTop, wallWidth - wallThickness * 2, h);
 }
 
 function drawCouplings(
@@ -75,87 +121,85 @@ function drawCouplings(
   width: number,
   color: string
 ) {
-  const couplingH = 3;
+  const couplingH = 4;
   const halfW = width / 2;
-  ctx.fillStyle = color;
+  const g = metalGradH(ctx, centerX - halfW, width, hex(color, 0.7), color);
+  ctx.fillStyle = g;
   ctx.fillRect(centerX - halfW, yTop, width, couplingH);
   ctx.fillRect(centerX - halfW, yBottom - couplingH, width, couplingH);
 }
 
-function gradientVertical(
+function drawInnerPipeBore(
   ctx: CanvasRenderingContext2D,
+  centerX: number,
   yTop: number,
   yBottom: number,
-  c1: string,
-  c2: string
+  pipeWidth: number,
+  color: string
 ) {
-  const g = ctx.createLinearGradient(0, yTop, 0, yBottom);
-  g.addColorStop(0, c1);
-  g.addColorStop(0.5, c2);
-  g.addColorStop(1, c1);
-  return g;
+  // Keep for legacy callers — maps to metallic pipe with thin walls.
+  drawMetallicPipe(ctx, centerX, yTop, yBottom, pipeWidth, 3, hex(color, 0.6), color);
 }
 
 // --- Equipment drawers -----------------------------------------------------
 
 function drawCasing(s: ShapeContext) {
   const { ctx, centerX, yTop, yBottom, pipeWidth, isSelected, equipment } = s;
-  const base = EQUIPMENT_COLORS.casing;
-  const color = pipeColor(isSelected, base);
   const casing = equipment as Casing;
-  // Casing is usually wider than pipe - draw thicker walls
-  const width = pipeWidth * 1.6;
+  const h = yBottom - yTop;
+  const width = pipeWidth * 1.65;
   const halfW = width / 2;
-  ctx.fillStyle = color;
-  ctx.fillRect(centerX - halfW, yTop, 3.5, yBottom - yTop);
-  ctx.fillRect(centerX + halfW - 3.5, yTop, 3.5, yBottom - yTop);
-  // Bore
-  ctx.fillStyle = hex(color, 0.08);
-  ctx.fillRect(centerX - halfW + 3.5, yTop, width - 7, yBottom - yTop);
 
-  // Joint collars
-  if (yBottom - yTop > 40) {
-    const step = Math.max(20, (yBottom - yTop) / 4);
-    ctx.fillStyle = color;
-    for (let y = yTop + step; y < yBottom; y += step) {
-      ctx.fillRect(centerX - halfW - 2, y - 1.5, width + 4, 3);
+  // Thick-walled metallic casing
+  drawMetallicPipe(ctx, centerX, yTop, yBottom, width, 5, '#1a2535', '#9ab8cc');
+
+  // Joint collars (heavier bands)
+  if (h > 35) {
+    const step = Math.max(22, h / 4);
+    for (let y = yTop + step; y < yBottom - 4; y += step) {
+      const cw = width + 7;
+      const cx2 = centerX - cw / 2;
+      const gc = metalGradH(ctx, cx2, cw, '#162030', '#b8d0e0');
+      ctx.fillStyle = gc;
+      ctx.fillRect(cx2, y - 2.5, cw, 5);
     }
   }
 
-  if (yBottom - yTop > 18) {
-    ctx.fillStyle = '#ffffff';
+  if (h > 18) {
+    ctx.fillStyle = isSelected ? SELECT_COLOR : 'rgba(180,210,230,0.7)';
     ctx.font = 'bold 8px Inter, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const cls = (casing.casingClass ?? 'production').slice(0, 3).toUpperCase();
-    ctx.fillText(cls, centerX, yTop + (yBottom - yTop) / 2);
+    ctx.fillText(cls, centerX, yTop + h / 2);
   }
 }
 
 function drawTubing(s: ShapeContext) {
   const { ctx, centerX, yTop, yBottom, pipeWidth, isSelected } = s;
-  const base = EQUIPMENT_COLORS.tubing;
-  const color = pipeColor(isSelected, base);
-  // Tubing narrower than casing / blank pipe
-  const width = pipeWidth * 0.75;
+  const h = yBottom - yTop;
+  const width = pipeWidth * 0.72;
   const halfW = width / 2;
-  ctx.fillStyle = color;
-  ctx.fillRect(centerX - halfW, yTop, 2, yBottom - yTop);
-  ctx.fillRect(centerX + halfW - 2, yTop, 2, yBottom - yTop);
-  ctx.fillStyle = hex(color, 0.12);
-  ctx.fillRect(centerX - halfW + 2, yTop, width - 4, yBottom - yTop);
 
-  // Tubing joint collars every ~9.5m (tighter spacing)
-  if (yBottom - yTop > 30) {
-    const step = Math.max(14, (yBottom - yTop) / 6);
-    ctx.strokeStyle = hex(color, 0.55);
-    ctx.lineWidth = 1;
-    for (let y = yTop + step; y < yBottom; y += step) {
-      ctx.beginPath();
-      ctx.moveTo(centerX - halfW - 3, y);
-      ctx.lineTo(centerX + halfW + 3, y);
-      ctx.stroke();
+  // Narrow metallic tubing
+  drawMetallicPipe(ctx, centerX, yTop, yBottom, width, 2.5, '#1e2d3c', '#6a8fa8');
+
+  // Collar ticks (lighter, denser spacing than casing)
+  if (h > 24) {
+    const step = Math.max(14, h / 6);
+    for (let y = yTop + step; y < yBottom - 2; y += step) {
+      const cw = width + 5;
+      const cx2 = centerX - cw / 2;
+      const gc = metalGradH(ctx, cx2, cw, '#182535', '#8aafc8');
+      ctx.fillStyle = gc;
+      ctx.fillRect(cx2, y - 1.5, cw, 3);
     }
+  }
+
+  if (isSelected) {
+    ctx.strokeStyle = SELECT_COLOR;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(centerX - halfW - 1, yTop, width + 2, h);
   }
 }
 
@@ -229,81 +273,104 @@ function drawConstrictor(s: ShapeContext) {
 
 function drawBlankPipe(s: ShapeContext) {
   const { ctx, centerX, yTop, yBottom, pipeWidth, isSelected } = s;
-  const color = pipeColor(isSelected, EQUIPMENT_COLORS.blank_pipe);
-  drawInnerPipeBore(ctx, centerX, yTop, yBottom, pipeWidth, color);
+  const base = EQUIPMENT_COLORS.blank_pipe;
+  const h = yBottom - yTop;
 
-  // Joint marks every 12.2m visually (subtle dashes on walls)
-  if (yBottom - yTop > 40) {
-    const step = Math.max(12, (yBottom - yTop) / 5);
-    ctx.strokeStyle = hex(color, 0.4);
-    ctx.lineWidth = 1;
-    for (let y = yTop + step; y < yBottom; y += step) {
-      ctx.beginPath();
-      ctx.moveTo(centerX - pipeWidth / 2 - 2, y);
-      ctx.lineTo(centerX - pipeWidth / 2 + 2, y);
-      ctx.moveTo(centerX + pipeWidth / 2 - 2, y);
-      ctx.lineTo(centerX + pipeWidth / 2 + 2, y);
-      ctx.stroke();
+  if (isSelected) {
+    // Selection highlight ring
+    ctx.strokeStyle = SELECT_COLOR;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(centerX - pipeWidth / 2 - 1, yTop, pipeWidth + 2, h);
+  }
+
+  // Metallic steel pipe walls with highlight shine
+  drawMetallicPipe(ctx, centerX, yTop, yBottom, pipeWidth, 4, '#2a3548', '#8baabf');
+
+  // Joint couplings: wider band with a bright ridge
+  if (h > 30) {
+    const step = Math.max(18, h / 5);
+    for (let y = yTop + step; y < yBottom - 4; y += step) {
+      const cw = pipeWidth + 6;
+      const cx2 = centerX - cw / 2;
+      const gC = metalGradH(ctx, cx2, cw, '#1e2d40', '#b0c8e0');
+      ctx.fillStyle = gC;
+      ctx.fillRect(cx2, y - 2, cw, 4);
     }
+  }
+
+  // Accent colour tint if colour mode active
+  if (!isSelected) {
+    ctx.fillStyle = hex(base, 0.08);
+    ctx.fillRect(centerX - pipeWidth / 2 + 4, yTop, pipeWidth - 8, h);
   }
 }
 
 function drawSwellPacker(s: ShapeContext) {
   const { ctx, centerX, yTop, yBottom, wellboreWidth, pipeWidth, isSelected, equipment } = s;
-  const base = EQUIPMENT_COLORS.swell_packer;
-  const color = pipeColor(isSelected, base);
-  const height = yBottom - yTop;
   const packer = equipment as SwellPacker;
+  const height = yBottom - yTop;
 
-  // Inner pipe through the packer
-  drawInnerPipeBore(ctx, centerX, yTop, yBottom, pipeWidth, '#475569');
+  // Inner mandrel (metallic steel tube)
+  drawMetallicPipe(ctx, centerX, yTop, yBottom, pipeWidth, 3, '#1e2d40', '#7a9ab5');
 
-  // Rubber element (wider, reaching toward OH wall)
-  const elementW = wellboreWidth * 0.95;
-  const halfElem = elementW / 2;
+  // Rubber element — tapered ends reaching toward OH wall
+  const elemW = wellboreWidth * 0.94;
+  const halfE = elemW / 2;
+  const taper = Math.min(height * 0.18, 12);
 
-  // Taper at top and bottom to suggest swelled profile
-  const taper = Math.min(height * 0.15, 10);
   ctx.beginPath();
-  ctx.moveTo(centerX - pipeWidth / 2 - 2, yTop);
-  ctx.lineTo(centerX - halfElem, yTop + taper);
-  ctx.lineTo(centerX - halfElem, yBottom - taper);
-  ctx.lineTo(centerX - pipeWidth / 2 - 2, yBottom);
-  ctx.lineTo(centerX + pipeWidth / 2 + 2, yBottom);
-  ctx.lineTo(centerX + halfElem, yBottom - taper);
-  ctx.lineTo(centerX + halfElem, yTop + taper);
-  ctx.lineTo(centerX + pipeWidth / 2 + 2, yTop);
+  ctx.moveTo(centerX - pipeWidth / 2 - 1, yTop);
+  ctx.lineTo(centerX - halfE, yTop + taper);
+  ctx.lineTo(centerX - halfE, yBottom - taper);
+  ctx.lineTo(centerX - pipeWidth / 2 - 1, yBottom);
+  ctx.lineTo(centerX + pipeWidth / 2 + 1, yBottom);
+  ctx.lineTo(centerX + halfE, yBottom - taper);
+  ctx.lineTo(centerX + halfE, yTop + taper);
+  ctx.lineTo(centerX + pipeWidth / 2 + 1, yTop);
   ctx.closePath();
 
-  // Gradient fill (rubber)
-  ctx.fillStyle = gradientVertical(ctx, yTop, yBottom, hex(base, 0.35), hex(base, 0.65));
+  // Deep rubber gradient: near-black base → dark teal/grey highlight
+  const rg = ctx.createLinearGradient(centerX - halfE, 0, centerX + halfE, 0);
+  rg.addColorStop(0,    '#111418');
+  rg.addColorStop(0.25, '#2a3a30');
+  rg.addColorStop(0.5,  '#3c5242');
+  rg.addColorStop(0.75, '#2a3a30');
+  rg.addColorStop(1,    '#111418');
+  ctx.fillStyle = rg;
   ctx.fill();
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1.5;
+
+  if (isSelected) {
+    ctx.strokeStyle = SELECT_COLOR;
+    ctx.lineWidth = 2;
+  } else {
+    ctx.strokeStyle = '#4a6a58';
+    ctx.lineWidth = 1.2;
+  }
   ctx.stroke();
 
-  // Cross-hatch (rubber texture)
+  // Fine diagonal ribbing (rubber texture)
   ctx.save();
   ctx.clip();
-  ctx.strokeStyle = hex(color, 0.55);
-  ctx.lineWidth = 0.7;
-  const spacing = 5;
-  for (let i = -Math.ceil(height / spacing); i < Math.ceil(elementW / spacing) + Math.ceil(height / spacing); i++) {
-    const x1 = centerX - halfElem + i * spacing;
-    ctx.beginPath();
-    ctx.moveTo(x1, yTop);
-    ctx.lineTo(x1 + height, yBottom);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(x1, yBottom);
-    ctx.lineTo(x1 + height, yTop);
-    ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth = 0.8;
+  const sp = 4;
+  for (let i = -Math.ceil(height / sp); i < Math.ceil(elemW / sp) + Math.ceil(height / sp); i++) {
+    const x1 = centerX - halfE + i * sp;
+    ctx.beginPath(); ctx.moveTo(x1, yTop); ctx.lineTo(x1 + height, yBottom); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x1, yBottom); ctx.lineTo(x1 + height, yTop); ctx.stroke();
   }
   ctx.restore();
 
-  // Label
-  if (height > 18) {
-    ctx.fillStyle = '#ffffff';
+  // Reflective highlight strip along the top edge of the rubber
+  const hl = ctx.createLinearGradient(centerX - halfE, yTop + taper, centerX + halfE, yTop + taper);
+  hl.addColorStop(0,   'rgba(255,255,255,0)');
+  hl.addColorStop(0.4, 'rgba(255,255,255,0.14)');
+  hl.addColorStop(1,   'rgba(255,255,255,0)');
+  ctx.fillStyle = hl;
+  ctx.fillRect(centerX - halfE, yTop + taper, elemW, Math.min(8, height * 0.12));
+
+  if (height > 20) {
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
     ctx.font = 'bold 9px Inter, system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -315,47 +382,81 @@ function drawSwellPacker(s: ShapeContext) {
 function drawSandScreen(s: ShapeContext) {
   const { ctx, centerX, yTop, yBottom, pipeWidth, isSelected } = s;
   const base = EQUIPMENT_COLORS.sand_screen;
-  const color = pipeColor(isSelected, base);
   const height = yBottom - yTop;
-  const screenW = pipeWidth * 1.35;
+  const screenW = pipeWidth * 1.38;
   const halfScr = screenW / 2;
+  const bodyTop = yTop + 4;
+  const bodyBot = yBottom - 4;
+  const bodyH = bodyBot - bodyTop;
 
-  // Gauge rings (top and bottom)
-  drawCouplings(ctx, centerX, yTop, yBottom, screenW + 6, color);
+  // Gauge rings (metallic collars top/bottom)
+  const ringW = screenW + 8;
+  drawCouplings(ctx, centerX, yTop, yBottom, ringW, '#8baabf');
 
-  // Main body (wire wrap)
-  ctx.fillStyle = hex(base, 0.18);
-  ctx.fillRect(centerX - halfScr, yTop + 3, screenW, height - 6);
+  // Screen body — metallic stainless-steel mesh base colour
+  const bodyGrad = ctx.createLinearGradient(centerX - halfScr, 0, centerX + halfScr, 0);
+  bodyGrad.addColorStop(0,    '#1a2535');
+  bodyGrad.addColorStop(0.15, '#3a5068');
+  bodyGrad.addColorStop(0.5,  '#5a7890');
+  bodyGrad.addColorStop(0.85, '#3a5068');
+  bodyGrad.addColorStop(1,    '#1a2535');
+  ctx.fillStyle = bodyGrad;
+  ctx.fillRect(centerX - halfScr, bodyTop, screenW, bodyH);
 
-  // Horizontal wire-wrap lines (fine)
-  ctx.strokeStyle = hex(color, 0.85);
-  ctx.lineWidth = 0.6;
-  const spacing = 2.5;
-  for (let y = yTop + 4; y < yBottom - 4; y += spacing) {
+  // Wire-wrap lines — fine horizontal wires (the "mesh")
+  ctx.lineWidth = 0.5;
+  const wireSpacing = 2.2;
+  for (let y = bodyTop + 1; y < bodyBot - 1; y += wireSpacing) {
+    const alpha = 0.55 + 0.25 * Math.sin((y - bodyTop) * 0.6);
+    ctx.strokeStyle = `rgba(160, 200, 220, ${alpha})`;
     ctx.beginPath();
-    ctx.moveTo(centerX - halfScr, y);
-    ctx.lineTo(centerX + halfScr, y);
+    ctx.moveTo(centerX - halfScr + 1, y);
+    ctx.lineTo(centerX + halfScr - 1, y);
     ctx.stroke();
   }
 
-  // Vertical support ribs
-  ctx.strokeStyle = hex(color, 0.5);
-  ctx.lineWidth = 0.8;
-  for (let i = -2; i <= 2; i++) {
-    const x = centerX + (i * screenW) / 5;
+  // Vertical support rods
+  ctx.lineWidth = 0.9;
+  ctx.strokeStyle = 'rgba(120,170,190,0.45)';
+  const nRods = 6;
+  for (let i = 0; i <= nRods; i++) {
+    const rx = centerX - halfScr + (i / nRods) * screenW;
     ctx.beginPath();
-    ctx.moveTo(x, yTop + 3);
-    ctx.lineTo(x, yBottom - 3);
+    ctx.moveTo(rx, bodyTop);
+    ctx.lineTo(rx, bodyBot);
     ctx.stroke();
   }
 
-  // Outer border
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1.2;
-  ctx.strokeRect(centerX - halfScr, yTop + 3, screenW, height - 6);
+  // Perforation holes on the screen body (small dots representing flow slots)
+  if (bodyH > 20) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    const holeSpacingY = 5;
+    const holeSpacingX = screenW / 7;
+    for (let y = bodyTop + 4; y < bodyBot - 4; y += holeSpacingY) {
+      const offset = ((Math.floor((y - bodyTop) / holeSpacingY) % 2) * holeSpacingX) / 2;
+      for (let x = centerX - halfScr + 3 + offset; x < centerX + halfScr - 3; x += holeSpacingX) {
+        ctx.beginPath();
+        ctx.arc(x, y, 0.9, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
 
-  // Inner bore overlay
-  drawInnerPipeBore(ctx, centerX, yTop, yBottom, pipeWidth, hex(color, 0.9));
+  // Outer border with selection highlight
+  ctx.strokeStyle = isSelected ? SELECT_COLOR : '#7aaec8';
+  ctx.lineWidth = isSelected ? 2 : 1.2;
+  ctx.strokeRect(centerX - halfScr, bodyTop, screenW, bodyH);
+
+  // Metallic inner mandrel pipe
+  drawMetallicPipe(ctx, centerX, yTop, yBottom, pipeWidth, 3, '#1e2d40', '#7a9ab5');
+
+  if (height > 22 && !isSelected) {
+    ctx.fillStyle = 'rgba(180,220,240,0.75)';
+    ctx.font = 'bold 8px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('SS', centerX, yTop + height / 2);
+  }
 }
 
 function drawICDScreen(s: ShapeContext) {

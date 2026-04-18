@@ -75,11 +75,19 @@ export function generateTally(
     }
   }
 
+  // Tally convention: deepest equipment at the top (first row), shallowest
+  // at the bottom — matching how running tools are picked up from the rig
+  // floor (TD piece goes in the hole first).
+  const reversed = rows.slice().reverse().map((row, idx) => ({
+    ...row,
+    sequence: idx + 1,
+  }));
+
   return {
     wellName,
     date: new Date().toISOString().split('T')[0],
     preparedBy: '',
-    rows,
+    rows: reversed,
     totalLength: Math.round(cumulativeLength * 100) / 100,
   };
 }

@@ -8,12 +8,12 @@ import { TallyTable } from '../tally/TallyTable';
 import { Toolbox } from '../toolbox/Toolbox';
 
 /**
- * In horizontal orientation we want depth to run along X (left → right).
- * The simplest way to reuse all the existing Y-based canvas math is to:
- *   - stack the log viewer and schematic viewer vertically (top/bottom)
- *   - rotate each panel's content 90° clockwise via CSS, swapping its
- *     apparent width/height so that the canvas' internal Y axis becomes
- *     the screen's X axis.
+ * Horizontal orientation: depth runs left → right.
+ * We render the existing vertical canvases inside wrappers that are rotated
+ * −90° around the origin. Correct transform is:
+ *   translate(0, Hpx) rotate(-90deg)
+ * which maps pre-corners (0,0)→(0,H), (H,0)→(0,0), (0,W)→(W,H), (H,W)→(W,0)
+ * so that shallow depth appears on the LEFT and deep depth on the RIGHT.
  */
 export function MainLayout() {
   const panelSplit = useUIStore((s) => s.panelSplit);
@@ -37,46 +37,71 @@ export function MainLayout() {
   }, []);
 
   if (isHorizontal) {
-    // Stack panels vertically. Each panel's inner content is rotated 90° so
-    // that the canvas' depth (Y) axis becomes the on-screen X axis.
-    const halfH = size.h / 2;
-    const logH = Math.max(120, halfH * panelSplit * 2); // reuse panelSplit as ratio between top (logs) and bottom (schematic)
+    // Reuse panelSplit as ratio of the top half (logs) vs the bottom half (schematic).
+    const logH = Math.max(120, size.h * panelSplit);
     const compH = Math.max(120, size.h - logH);
 
-    const rotatedBoxStyle = (w: number, h: number): React.CSSProperties => ({
+    /**
+     * Return the style needed to render a (W × H) horizontal-display panel
+     * using the existing vertical canvas layout. The canvas is sized at
+     * (H × W) pre-rotation and transformed into the final horizontal box.
+     */
+    const rotatedBoxStyle = (W: number, H: number): React.CSSProperties => ({
       position: 'absolute',
-      width: h,
-      height: w,
-      transform: `rotate(-90deg) translate(-${w}px, 0)`,
-      transformOrigin: 'top left',
+      width: H,
+      height: W,
       top: 0,
       left: 0,
+      transformOrigin: '0 0',
+      transform: `translate(0, ${H}px) rotate(-90deg)`,
     });
 
     return (
       <div className="flex flex-1 overflow-hidden">
-        {showToolbox && <Toolbox />}
-        <div ref={containerRef} className="flex-1 flex flex-col overflow-hidden relative" data-export-area>
-          <div className="shrink-0 overflow-hidden relative" style={{ height: logH, width: '100%' }}>
-            <div style={rotatedBoxStyle(size.w, logH)}>
-              <LogViewer />
-            </div>
+        {showToolbox && (
+          <div data-no-export>
+            <Toolbox />
           </div>
-          <div className="shrink-0 overflow-hidden relative" style={{ height: compH, width: '100%' }}>
-            <div style={rotatedBoxStyle(size.w, compH)}>
-              <CompletionViewer />
+        )}
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+          <div
+            ref={containerRef}
+            className="flex-1 flex flex-col overflow-hidden relative"
+            data-export-region
+            data-export-area
+          >
+            <div
+              className="shrink-0 overflow-hidden relative border-b"
+              style={{ height: logH, width: '100%', borderColor: 'var(--color-border)' }}
+            >
+              <div style={rotatedBoxStyle(size.w, logH)}>
+                <LogViewer />
+              </div>
+            </div>
+            <div
+              className="shrink-0 overflow-hidden relative"
+              style={{ height: compH, width: '100%' }}
+            >
+              <div style={rotatedBoxStyle(size.w, compH)}>
+                <CompletionViewer />
+              </div>
             </div>
           </div>
           {showTally && (
             <div
               className="h-64 border-t overflow-hidden shrink-0"
               style={{ borderColor: 'var(--color-border)' }}
+              data-no-export
             >
               <TallyTable />
             </div>
           )}
         </div>
-        {showProperties && <PropertiesPanel />}
+        {showProperties && (
+          <div data-no-export>
+            <PropertiesPanel />
+          </div>
+        )}
       </div>
     );
   }
@@ -89,24 +114,40 @@ export function MainLayout() {
           className="flex overflow-hidden w-full h-full"
           data-export-area
         >
-          {showToolbox && <Toolbox />}
+          {showToolbox && (
+            <div data-no-export>
+              <Toolbox />
+            </div>
+          )}
 
-          {/* Left Panel - Log Viewer */}
-          <div className="flex flex-col overflow-hidden" style={{ width: `${panelSplit * 100}%` }}>
-            <LogViewer />
-          </div>
-
-          <PanelResizer />
-
-          {/* Right Panel - Completion Schematic */}
           <div
-            className="flex flex-col overflow-hidden"
-            style={{ width: `${(1 - panelSplit) * 100}%` }}
+            className="flex flex-1 overflow-hidden"
+            data-export-region
           >
-            <CompletionViewer />
+            {/* Left Panel - Log Viewer */}
+            <div
+              className="flex flex-col overflow-hidden"
+              style={{ width: `${panelSplit * 100}%` }}
+            >
+              <LogViewer />
+            </div>
+
+            <PanelResizer />
+
+            {/* Right Panel - Completion Schematic */}
+            <div
+              className="flex flex-col overflow-hidden"
+              style={{ width: `${(1 - panelSplit) * 100}%` }}
+            >
+              <CompletionViewer />
+            </div>
           </div>
 
-          {showProperties && <PropertiesPanel />}
+          {showProperties && (
+            <div data-no-export>
+              <PropertiesPanel />
+            </div>
+          )}
         </div>
       </div>
 
@@ -114,6 +155,7 @@ export function MainLayout() {
         <div
           className="h-64 border-t overflow-hidden shrink-0"
           style={{ borderColor: 'var(--color-border)' }}
+          data-no-export
         >
           <TallyTable />
         </div>

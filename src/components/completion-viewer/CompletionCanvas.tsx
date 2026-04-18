@@ -139,13 +139,29 @@ export function CompletionCanvas() {
       const rect = containerRef.current.getBoundingClientRect();
       if (moveState) {
         const depth = pixelToDepth(e.clientY - rect.top);
-        setMoveState((prev) => (prev ? { ...prev, currentTopMD: depth - prev.grabOffsetMD } : prev));
+        const requestedTop = depth - moveState.grabOffsetMD;
+        // Clamp against other non-blank equipment so the drag preview shows
+        // the real landing position (can only slide through blank pipe).
+        const obstacles = items.filter(
+          (i) => i.id !== moveState.id && i.type !== 'blank_pipe'
+        );
+        let minTop = -Infinity;
+        let maxTop = Infinity;
+        for (const o of obstacles) {
+          if (o.bottomMD <= moveState.currentTopMD + 0.001) {
+            if (o.bottomMD > minTop) minTop = o.bottomMD;
+          } else if (o.topMD >= moveState.currentTopMD + moveState.length - 0.001) {
+            if (o.topMD - moveState.length < maxTop) maxTop = o.topMD - moveState.length;
+          }
+        }
+        const clampedTop = Math.max(minTop, Math.min(maxTop, requestedTop));
+        setMoveState((prev) => (prev ? { ...prev, currentTopMD: clampedTop } : prev));
         return;
       }
       if (activeTool === 'select') return;
       onMouseMove(e, rect);
     },
-    [activeTool, onMouseMove, moveState, pixelToDepth]
+    [activeTool, onMouseMove, moveState, pixelToDepth, items]
   );
 
   const handleMouseUp = useCallback(() => {
