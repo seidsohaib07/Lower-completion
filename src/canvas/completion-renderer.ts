@@ -33,11 +33,12 @@ export function renderCompletionSchematic(
   const pipeWidth = wellboreWidth * 0.55;
   const halfWellbore = wellboreWidth / 2;
 
-  drawSandstoneFormation(ctx, width, height, centerX, halfWellbore, theme);
+  const activeMarkers = showFormationMarkers && formationMarkers && formationMarkers.length > 0 ? formationMarkers : undefined;
+  drawSandstoneFormation(ctx, width, height, centerX, halfWellbore, theme, topDepth, pixelsPerMeter, activeMarkers);
   drawOpenHole(ctx, centerX, halfWellbore, height, theme);
 
-  if (showFormationMarkers && formationMarkers && formationMarkers.length > 0) {
-    drawFormationZones(ctx, width, height, centerX, halfWellbore, topDepth, pixelsPerMeter, formationMarkers, theme);
+  if (activeMarkers) {
+    drawFormationZones(ctx, width, height, centerX, halfWellbore, topDepth, pixelsPerMeter, activeMarkers, theme);
   }
 
   drawDepthGrid(ctx, width, height, topDepth, bottomDepth, pixelsPerMeter, theme);
@@ -81,7 +82,10 @@ function drawSandstoneFormation(
   height: number,
   centerX: number,
   halfWellbore: number,
-  theme: 'light' | 'dark'
+  theme: 'light' | 'dark',
+  topDepth?: number,
+  pixelsPerMeter?: number,
+  formationMarkers?: FormationMarker[]
 ) {
   const sandTop = theme === 'dark' ? '#3f2f1e' : '#d6bc8b';
   const sandMid = theme === 'dark' ? '#5a4226' : '#e6cf9c';
@@ -130,6 +134,25 @@ function drawSandstoneFormation(
         ctx.arc(rightX + x + ((y % 2) ? step / 2 : 0), y, 0.8, 0, Math.PI * 2);
         ctx.fill();
       }
+    }
+  }
+
+  // Per-formation color overlays on sand walls only (texture is preserved underneath)
+  if (formationMarkers && formationMarkers.length > 0 && topDepth !== undefined && pixelsPerMeter !== undefined) {
+    const palette = theme === 'dark' ? FORMATION_COLORS_DARK : FORMATION_COLORS_LIGHT;
+    for (let i = 0; i < formationMarkers.length; i++) {
+      const marker = formationMarkers[i];
+      const colors = palette[i % palette.length];
+      const yTop = (marker.topMD - topDepth) * pixelsPerMeter;
+      const nextMD = marker.bottomMD ?? (i + 1 < formationMarkers.length ? formationMarkers[i + 1].topMD : undefined);
+      const yBottom = nextMD !== undefined ? (nextMD - topDepth) * pixelsPerMeter : height;
+      const zoneH = yBottom - yTop;
+      if (zoneH <= 0) continue;
+      // Higher-opacity overlay so the color is visible through the texture
+      const overlayColor = colors.fill.replace(/[\d.]+\)$/, '0.28)');
+      ctx.fillStyle = overlayColor;
+      ctx.fillRect(leftX, yTop, leftW, zoneH);
+      ctx.fillRect(rightX, yTop, rightW, zoneH);
     }
   }
 
@@ -273,14 +296,6 @@ function drawFormationZones(
 
     const nextMD = marker.bottomMD ?? (i + 1 < markers.length ? markers[i + 1].topMD : undefined);
     const yBottom = nextMD !== undefined ? (nextMD - topDepth) * pixelsPerMeter : undefined;
-
-    // Zone fill in both formation walls
-    if (yBottom !== undefined) {
-      const zoneH = yBottom - yTop;
-      ctx.fillStyle = colors.fill;
-      ctx.fillRect(0, yTop, leftW, zoneH);
-      ctx.fillRect(rightX, yTop, rightW, zoneH);
-    }
 
     // Horizontal marker line across full width
     drawHorizontalLine(ctx, yTop, 0, width, colors.line, 1.2);

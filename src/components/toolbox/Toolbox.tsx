@@ -19,91 +19,65 @@ const TOOLBOX_GROUPS: ToolboxGroup[] = [
 export function Toolbox() {
   const activeTool = useUIStore((s) => s.activeTool);
   const setActiveTool = useUIStore((s) => s.setActiveTool);
-  const [activeGroup, setActiveGroup] = useState<string>(TOOLBOX_GROUPS[0].name);
+  const [activeTab, setActiveTab] = useState(TOOLBOX_GROUPS[0].name);
+
+  const currentGroup = TOOLBOX_GROUPS.find((g) => g.name === activeTab) ?? TOOLBOX_GROUPS[0];
 
   const armTool = (type: EquipmentType) => {
     const toolId = `place_${type}` as const;
     setActiveTool(activeTool === toolId ? 'select' : toolId);
   };
 
-  const currentGroup = TOOLBOX_GROUPS.find((g) => g.name === activeGroup) ?? TOOLBOX_GROUPS[0];
-
   return (
     <div
-      className="flex border-r shrink-0"
+      className="flex flex-col shrink-0 border-b select-none"
       style={{
         background: 'var(--color-surface-deep)',
         borderColor: 'var(--color-border)',
-        zIndex: 40,
       }}
       data-no-export
     >
-      {/* Column 1: Groups */}
+      {/* Tab bar */}
       <div
-        className="flex flex-col shrink-0 border-r overflow-y-auto"
-        style={{ width: 48, borderColor: 'var(--color-border)' }}
+        className="flex items-end border-b px-2 gap-0"
+        style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
       >
-        {/* Select tool */}
-        <button
-          onClick={() => setActiveTool('select')}
-          title="Select / Move (S)"
-          className="w-full flex flex-col items-center gap-0.5 py-2 transition-all"
-          style={{
-            color: activeTool === 'select' ? 'var(--color-accent)' : 'var(--color-text-muted)',
-            background: activeTool === 'select' ? 'rgba(245,158,11,0.12)' : 'transparent',
-          }}
-        >
-          <svg viewBox="0 0 24 24" width={16} height={16} fill="none">
-            <path
-              d="M5 3l14 9-7 1.5L9 21z"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinejoin="round"
-              fill={activeTool === 'select' ? 'currentColor' : 'none'}
-            />
-          </svg>
-          <span className="text-[7px] uppercase tracking-wider">Select</span>
-        </button>
-
-        <div className="w-full" style={{ height: 1, background: 'var(--color-border)' }} />
-
-        {/* Group buttons */}
         {TOOLBOX_GROUPS.map((group) => {
-          const isActive = activeGroup === group.name;
+          const isActive = activeTab === group.name;
           const hasActiveTool = group.items.some((t) => activeTool === `place_${t}`);
           return (
             <button
               key={group.name}
-              onClick={() => setActiveGroup(group.name)}
-              onMouseEnter={() => setActiveGroup(group.name)}
-              className="w-full flex flex-col items-center gap-0.5 py-2 transition-all"
+              onClick={() => setActiveTab(group.name)}
+              className="px-4 py-1.5 text-[10px] font-semibold tracking-wide transition-all border-t border-l border-r relative"
               style={{
-                background: isActive ? 'var(--color-surface-light)' : 'transparent',
-                color: hasActiveTool ? 'var(--color-accent)' : isActive ? 'var(--color-text)' : 'var(--color-text-muted)',
-                borderLeft: isActive ? '2px solid var(--color-accent)' : '2px solid transparent',
+                background: isActive ? 'var(--color-surface-deep)' : 'transparent',
+                color: hasActiveTool
+                  ? 'var(--color-accent)'
+                  : isActive
+                  ? 'var(--color-text)'
+                  : 'var(--color-text-muted)',
+                borderColor: isActive ? 'var(--color-border)' : 'transparent',
+                borderBottomColor: isActive ? 'var(--color-surface-deep)' : 'transparent',
+                borderRadius: '4px 4px 0 0',
+                marginBottom: isActive ? -1 : 0,
+                zIndex: isActive ? 1 : 0,
               }}
-              title={group.name}
             >
-              <span className="text-[8px] font-semibold text-center leading-tight select-none" style={{ maxWidth: 44 }}>
-                {group.name}
-              </span>
+              {group.name}
+              {hasActiveTool && (
+                <span
+                  className="ml-1 inline-block w-1.5 h-1.5 rounded-full"
+                  style={{ background: 'var(--color-accent)', verticalAlign: 'middle' }}
+                />
+              )}
             </button>
           );
         })}
       </div>
 
-      {/* Column 2: Items in selected group */}
-      <div
-        className="flex flex-col overflow-y-auto"
-        style={{ width: 100 }}
-      >
-        <div
-          className="text-[7px] uppercase tracking-widest text-center py-1.5 border-b font-semibold select-none"
-          style={{ color: 'var(--color-text-muted)', borderColor: 'var(--color-border)' }}
-        >
-          {currentGroup.name}
-        </div>
-
+      {/* Equipment items — horizontal scroll row */}
+      <div className="flex items-center gap-1 px-2 py-1 overflow-x-auto">
         {currentGroup.items.map((type) => {
           const toolId = `place_${type}` as const;
           const isActive = activeTool === toolId;
@@ -118,24 +92,24 @@ export function Toolbox() {
                 e.dataTransfer.effectAllowed = 'copy';
               }}
               onClick={() => armTool(type)}
-              className="flex items-center gap-1.5 w-full px-2 py-1.5 text-left transition-all hover:bg-[rgba(148,163,184,0.1)] cursor-grab active:cursor-grabbing"
+              className="flex flex-col items-center gap-0.5 px-2 pt-1 pb-0.5 rounded transition-all shrink-0 cursor-grab active:cursor-grabbing"
               style={{
-                background: isActive ? `${color}20` : 'transparent',
-                borderLeft: isActive ? `2px solid ${color}` : '2px solid transparent',
+                background: isActive ? `${color}1a` : 'transparent',
+                border: isActive ? `1px solid ${color}60` : '1px solid transparent',
+                minWidth: 52,
               }}
             >
               <div
-                className="shrink-0"
                 style={{
-                  filter: isActive ? 'none' : 'grayscale(80%) brightness(0.8)',
-                  opacity: isActive ? 1 : 0.7,
+                  filter: isActive ? 'none' : 'grayscale(80%) brightness(0.85)',
+                  opacity: isActive ? 1 : 0.75,
                 }}
               >
-                <ToolboxIcon type={type} color={color} size={20} />
+                <ToolboxIcon type={type} color={color} size={28} />
               </div>
               <span
-                className="text-[8px] font-medium leading-tight select-none"
-                style={{ color: isActive ? color : 'var(--color-text-muted)' }}
+                className="text-[8px] text-center leading-tight whitespace-nowrap"
+                style={{ color: isActive ? color : 'var(--color-text-muted)', maxWidth: 56 }}
               >
                 {EQUIPMENT_LABELS[type]}
               </span>

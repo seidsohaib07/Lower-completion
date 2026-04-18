@@ -122,6 +122,12 @@ export async function parseLASFile(file: File): Promise<LogDataSet> {
     maxDepth,
   };
 
+  // How many whitespace-separated tokens each column consumes in data rows.
+  // Date columns (unit 'd') look like "22.12.2023 00:00:08" → 2 tokens.
+  // Time-of-day columns (unit 'c') look like "00:00:08" → 1 token.
+  // Everything else → 1 token.
+  const tokensPerCol: number[] = [];
+
   function identifyColumns() {
     for (const info of curveInfos) {
       if (DEPTH_MNEMONICS.has(info.mnemonic)) {
@@ -151,6 +157,12 @@ export async function parseLASFile(file: File): Promise<LogDataSet> {
       })
       .map(info => info.colIndex);
 
+    // Build per-column token-consumption table.
+    for (const info of curveInfos) {
+      // Date columns (unit 'd') produce "DD.MM.YYYY HH:MM:SS" — 2 tokens in data rows.
+      tokensPerCol[info.colIndex] = info.unit.toLowerCase() === 'd' ? 2 : 1;
+    }
+
     for (const idx of numericColIndices) {
       curveData.set(idx, []);
     }
@@ -158,29 +170,28 @@ export async function parseLASFile(file: File): Promise<LogDataSet> {
 
   function parseDataLine(line: string) {
     const tokens = line.split(/\s+/);
-    if (tokens.length < curveInfos.length) {
-      if (!isWrapped) return;
-    }
 
     const numericValues: Map<number, number> = new Map();
     let tokenIdx = 0;
 
-    for (let colIdx = 0; colIdx < curveInfos.length && tokenIdx < tokens.length; colIdx++) {
-      const token = tokens[tokenIdx];
-      tokenIdx++;
+    for (let colIdx = 0; colIdx < curveInfos.length; colIdx++) {
+      const consume = tokensPerCol[colIdx] ?? 1;
+      if (tokenIdx >= tokens.length) break;
 
       if (colIdx === depthColIndex) {
-        const v = Number(token);
-        if (!isNaN(v)) {
-          numericValues.set(colIdx, v);
-        }
+        // Depth is always a single numeric token.
+        const v = Number(tokens[tokenIdx]);
+        if (!isNaN(v)) numericValues.set(colIdx, v);
+        tokenIdx += consume;
         continue;
       }
 
       if (numericColIndices.includes(colIdx)) {
-        const v = Number(token);
+        const v = Number(tokens[tokenIdx]);
         numericValues.set(colIdx, isNaN(v) ? NaN : v);
       }
+
+      tokenIdx += consume;
     }
 
     const depthVal = numericValues.get(depthColIndex);
