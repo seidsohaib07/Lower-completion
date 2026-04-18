@@ -94,10 +94,10 @@ export function renderDepthTrack(
       const y = (marker.topMD - topDepth) * pixelsPerMeter;
       if (y < -20 || y > height + 20) continue;
       drawHorizontalLine(ctx, y, 0, width, markerColor, 1.2);
-      drawText(ctx, marker.name, 4, y - 3, {
+      drawText(ctx, marker.name, width - 4, y - 3, {
         color: markerTextColor,
         font: 'bold 7px Inter, system-ui, sans-serif',
-        align: 'left',
+        align: 'right',
         baseline: 'bottom',
       });
     }
