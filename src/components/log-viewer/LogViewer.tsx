@@ -1,5 +1,6 @@
 import { useRef } from 'react';
-import { useLogDataStore, useViewportStore } from '../../stores';
+import { useLogDataStore, useViewportStore, useUIStore } from '../../stores';
+import { DEPTH_TRACK_WIDTH } from '../../constants';
 import { useSynchronizedScroll } from '../../hooks/use-synchronized-scroll';
 import { DepthTrackCanvas } from './DepthTrackCanvas';
 import { LogTrackCanvas } from './LogTrackCanvas';
@@ -14,6 +15,10 @@ export function LogViewer() {
   const topDepth = useViewportStore((s) => s.topDepth);
   const bottomDepth = useViewportStore((s) => s.bottomDepth);
   const pixelsPerMeter = useViewportStore((s) => s.pixelsPerMeter);
+
+  const depthMode = useViewportStore((s) => s.depthMode);
+  const showDual = depthMode === 'TVD_MSL';
+  const depthHeaderWidth = showDual ? DEPTH_TRACK_WIDTH + 50 : DEPTH_TRACK_WIDTH;
 
   useSynchronizedScroll(containerRef);
 
@@ -42,14 +47,16 @@ export function LogViewer() {
       <div className="flex shrink-0">
         <div
           className="shrink-0 h-10 flex items-center justify-center border-b"
-          style={{ width: 70, borderColor: 'var(--color-border)' }}
+          style={{ width: depthHeaderWidth, borderColor: 'var(--color-border)' }}
         >
-          <span
-            className="text-[10px] font-semibold"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
-            DEPTH
-          </span>
+          {showDual ? (
+            <div className="flex w-full">
+              <span className="flex-1 text-center text-[9px] font-semibold" style={{ color: 'var(--color-text-muted)' }}>MD</span>
+              <span className="flex-1 text-center text-[9px] font-semibold" style={{ color: 'var(--color-text-muted)' }}>TVD-MSL</span>
+            </div>
+          ) : (
+            <span className="text-[10px] font-semibold" style={{ color: 'var(--color-text-muted)' }}>DEPTH</span>
+          )}
         </div>
         {visibleTracks.map((track) => (
           <div key={track.id} style={{ minWidth: track.width, flex: 1 }}>
