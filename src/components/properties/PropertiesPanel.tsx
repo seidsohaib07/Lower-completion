@@ -8,12 +8,28 @@ export function PropertiesPanel() {
   const updateEquipment = useCompletionStore((s) => s.updateEquipment);
   const removeEquipment = useCompletionStore((s) => s.removeEquipment);
 
+  const shell: React.CSSProperties = {
+    background: 'var(--color-surface)',
+    color: 'var(--color-text)',
+    borderColor: 'var(--color-border)',
+  };
+
   if (selection.type !== 'equipment' || !selection.equipmentId) {
     return (
-      <div className="w-56 bg-[#0f172a] border-l border-[#1e293b] p-3 overflow-y-auto shrink-0">
-        <p className="text-[10px] text-[#64748b] uppercase tracking-wider mb-2">Properties</p>
-        <p className="text-xs text-[#475569]">Select equipment to view properties</p>
-      </div>
+      <aside
+        className="w-60 border-l p-3 overflow-y-auto shrink-0"
+        style={shell}
+      >
+        <p
+          className="text-[10px] uppercase tracking-wider mb-2 font-semibold"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
+          Properties
+        </p>
+        <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+          Select equipment to view properties
+        </p>
+      </aside>
     );
   }
 
@@ -21,13 +37,22 @@ export function PropertiesPanel() {
   if (!item) return null;
 
   return (
-    <div className="w-56 bg-[#0f172a] border-l border-[#1e293b] p-3 overflow-y-auto shrink-0">
+    <aside
+      className="w-60 border-l p-3 overflow-y-auto shrink-0"
+      style={shell}
+    >
       <div className="flex items-center justify-between mb-3">
-        <p className="text-[10px] text-[#64748b] uppercase tracking-wider">Properties</p>
+        <p
+          className="text-[10px] uppercase tracking-wider font-semibold"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
+          Properties
+        </p>
         {item.type !== 'blank_pipe' && (
           <button
             onClick={() => removeEquipment(item.id)}
-            className="text-[10px] text-red-400 hover:text-red-300"
+            className="text-[10px] px-2 py-0.5 rounded transition-colors"
+            style={{ color: 'var(--color-danger)' }}
           >
             Remove
           </button>
@@ -35,10 +60,14 @@ export function PropertiesPanel() {
       </div>
 
       <div
-        className="flex items-center gap-2 mb-3 pb-2 border-b border-[#1e293b]"
+        className="flex items-center gap-2 mb-3 pb-2 border-b"
+        style={{ borderColor: 'var(--color-border)' }}
       >
-        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: EQUIPMENT_COLORS[item.type] }} />
-        <span className="text-xs font-medium text-[#e2e8f0]">{EQUIPMENT_LABELS[item.type]}</span>
+        <div
+          className="w-3 h-3 rounded-sm"
+          style={{ backgroundColor: EQUIPMENT_COLORS[item.type] }}
+        />
+        <span className="text-xs font-semibold">{EQUIPMENT_LABELS[item.type]}</span>
       </div>
 
       <FieldGroup label="Depth">
@@ -48,30 +77,56 @@ export function PropertiesPanel() {
       </FieldGroup>
 
       <FieldGroup label="Dimensions">
-        <EditableField label="OD" value={item.od} unit="in" onChange={(v) => updateEquipment(item.id, { od: v })} />
-        <EditableField label="ID" value={item.innerDiameter} unit="in" onChange={(v) => updateEquipment(item.id, { innerDiameter: v })} />
+        <EditableField
+          label="OD"
+          value={item.od}
+          unit="in"
+          onChange={(v) => updateEquipment(item.id, { od: v })}
+        />
+        <EditableField
+          label="ID"
+          value={item.innerDiameter}
+          unit="in"
+          onChange={(v) => updateEquipment(item.id, { innerDiameter: v })}
+        />
       </FieldGroup>
 
-      {item.type === 'swell_packer' && <SwellPackerFields item={item as SwellPacker} onUpdate={updateEquipment} />}
-      {item.type === 'sand_screen' && <SandScreenFields item={item as SandScreen} onUpdate={updateEquipment} />}
-      {item.type === 'sliding_sleeve' && <SlidingSleeveFields item={item as SlidingSleeve} onUpdate={updateEquipment} />}
+      {item.type === 'swell_packer' && (
+        <SwellPackerFields item={item as SwellPacker} onUpdate={updateEquipment} />
+      )}
+      {item.type === 'sand_screen' && (
+        <SandScreenFields item={item as SandScreen} onUpdate={updateEquipment} />
+      )}
+      {item.type === 'sliding_sleeve' && (
+        <SlidingSleeveFields item={item as SlidingSleeve} onUpdate={updateEquipment} />
+      )}
 
       <FieldGroup label="Notes">
         <textarea
-          className="w-full bg-[#1e293b] text-[#e2e8f0] text-[10px] p-1.5 rounded border border-[#334155] resize-none h-14"
+          className="w-full text-[10px] p-1.5 rounded border resize-none h-14 focus:outline-none"
+          style={{
+            background: 'var(--color-surface-light)',
+            color: 'var(--color-text)',
+            borderColor: 'var(--color-border)',
+          }}
           value={item.comment ?? ''}
           onChange={(e) => updateEquipment(item.id, { comment: e.target.value })}
           placeholder="Add notes..."
         />
       </FieldGroup>
-    </div>
+    </aside>
   );
 }
 
 function FieldGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="mb-3">
-      <p className="text-[9px] text-[#475569] uppercase tracking-wider mb-1">{label}</p>
+      <p
+        className="text-[9px] uppercase tracking-wider mb-1.5 font-semibold"
+        style={{ color: 'var(--color-text-muted)' }}
+      >
+        {label}
+      </p>
       <div className="space-y-1">{children}</div>
     </div>
   );
@@ -79,38 +134,76 @@ function FieldGroup({ label, children }: { label: string; children: React.ReactN
 
 function Field({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-[10px] text-[#94a3b8]">{label}</span>
-      <span className="text-[10px] text-[#e2e8f0]">{value} {unit}</span>
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
+        {label}
+      </span>
+      <span className="text-[10px] tabular-nums" style={{ color: 'var(--color-text)' }}>
+        {value} {unit}
+      </span>
     </div>
   );
 }
 
-function EditableField({ label, value, unit, onChange }: { label: string; value: number; unit: string; onChange: (v: number) => void }) {
+function EditableField({
+  label,
+  value,
+  unit,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  unit: string;
+  onChange: (v: number) => void;
+}) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-[10px] text-[#94a3b8]">{label}</span>
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
+        {label}
+      </span>
       <div className="flex items-center gap-1">
         <input
           type="number"
-          className="w-14 bg-[#1e293b] text-[#e2e8f0] text-[10px] px-1 py-0.5 rounded border border-[#334155] text-right"
+          className="w-16 text-[10px] px-1.5 py-0.5 rounded border text-right tabular-nums focus:outline-none focus:ring-1"
+          style={{
+            background: 'var(--color-surface-light)',
+            color: 'var(--color-text)',
+            borderColor: 'var(--color-border)',
+          }}
           value={value}
           step={0.001}
           onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
         />
-        <span className="text-[9px] text-[#64748b]">{unit}</span>
+        <span className="text-[9px]" style={{ color: 'var(--color-text-muted)' }}>
+          {unit}
+        </span>
       </div>
     </div>
   );
 }
 
-function SwellPackerFields({ item, onUpdate }: { item: SwellPacker; onUpdate: (id: string, u: Partial<SwellPacker>) => void }) {
+const selectStyle: React.CSSProperties = {
+  background: 'var(--color-surface-light)',
+  color: 'var(--color-text)',
+  borderColor: 'var(--color-border)',
+};
+
+function SwellPackerFields({
+  item,
+  onUpdate,
+}: {
+  item: SwellPacker;
+  onUpdate: (id: string, u: Partial<SwellPacker>) => void;
+}) {
   return (
     <FieldGroup label="Swell Packer">
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] text-[#94a3b8]">Medium</span>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
+          Medium
+        </span>
         <select
-          className="bg-[#1e293b] text-[#e2e8f0] text-[10px] px-1 py-0.5 rounded border border-[#334155]"
+          className="text-[10px] px-1 py-0.5 rounded border"
+          style={selectStyle}
           value={item.swellMedium}
           onChange={(e) => onUpdate(item.id, { swellMedium: e.target.value as any })}
         >
@@ -125,14 +218,28 @@ function SwellPackerFields({ item, onUpdate }: { item: SwellPacker; onUpdate: (i
   );
 }
 
-function SandScreenFields({ item, onUpdate }: { item: SandScreen; onUpdate: (id: string, u: Partial<SandScreen>) => void }) {
+function SandScreenFields({
+  item,
+  onUpdate,
+}: {
+  item: SandScreen;
+  onUpdate: (id: string, u: Partial<SandScreen>) => void;
+}) {
   return (
     <FieldGroup label="Sand Screen">
-      <EditableField label="Mesh Size" value={item.meshSize} unit="μm" onChange={(v) => onUpdate(item.id, { meshSize: v })} />
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] text-[#94a3b8]">Type</span>
+      <EditableField
+        label="Mesh Size"
+        value={item.meshSize}
+        unit="μm"
+        onChange={(v) => onUpdate(item.id, { meshSize: v })}
+      />
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
+          Type
+        </span>
         <select
-          className="bg-[#1e293b] text-[#e2e8f0] text-[10px] px-1 py-0.5 rounded border border-[#334155]"
+          className="text-[10px] px-1 py-0.5 rounded border"
+          style={selectStyle}
           value={item.screenType}
           onChange={(e) => onUpdate(item.id, { screenType: e.target.value as any })}
         >
@@ -146,13 +253,22 @@ function SandScreenFields({ item, onUpdate }: { item: SandScreen; onUpdate: (id:
   );
 }
 
-function SlidingSleeveFields({ item, onUpdate }: { item: SlidingSleeve; onUpdate: (id: string, u: Partial<SlidingSleeve>) => void }) {
+function SlidingSleeveFields({
+  item,
+  onUpdate,
+}: {
+  item: SlidingSleeve;
+  onUpdate: (id: string, u: Partial<SlidingSleeve>) => void;
+}) {
   return (
     <FieldGroup label="Sliding Sleeve">
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] text-[#94a3b8]">Type</span>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
+          Type
+        </span>
         <select
-          className="bg-[#1e293b] text-[#e2e8f0] text-[10px] px-1 py-0.5 rounded border border-[#334155]"
+          className="text-[10px] px-1 py-0.5 rounded border"
+          style={selectStyle}
           value={item.sleeveType}
           onChange={(e) => onUpdate(item.id, { sleeveType: e.target.value as any })}
         >
@@ -160,12 +276,25 @@ function SlidingSleeveFields({ item, onUpdate }: { item: SlidingSleeve; onUpdate
           <option value="hydraulic">Hydraulic</option>
         </select>
       </div>
-      <EditableField label="Nozzles" value={item.nozzleCount ?? 0} unit="" onChange={(v) => onUpdate(item.id, { nozzleCount: v })} />
-      <EditableField label="Nozzle Size" value={item.nozzleSize ?? 0} unit="mm" onChange={(v) => onUpdate(item.id, { nozzleSize: v })} />
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] text-[#94a3b8]">Position</span>
+      <EditableField
+        label="Nozzles"
+        value={item.nozzleCount ?? 0}
+        unit=""
+        onChange={(v) => onUpdate(item.id, { nozzleCount: v })}
+      />
+      <EditableField
+        label="Nozzle Size"
+        value={item.nozzleSize ?? 0}
+        unit="mm"
+        onChange={(v) => onUpdate(item.id, { nozzleSize: v })}
+      />
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
+          Position
+        </span>
         <select
-          className="bg-[#1e293b] text-[#e2e8f0] text-[10px] px-1 py-0.5 rounded border border-[#334155]"
+          className="text-[10px] px-1 py-0.5 rounded border"
+          style={selectStyle}
           value={item.position}
           onChange={(e) => onUpdate(item.id, { position: e.target.value as any })}
         >

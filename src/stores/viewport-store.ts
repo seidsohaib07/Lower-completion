@@ -72,39 +72,44 @@ export const useViewportStore = create<ViewportState>((set, get) => ({
     let newTop = topDepth + deltaMD;
     let newBottom = bottomDepth + deltaMD;
 
-    // Clamp to total data bounds
-    if (newTop < totalMinDepth) {
-      newTop = totalMinDepth;
+    // Clamp to a generous bound so the user can always scroll back. If the
+    // visible range is larger than the data, allow the data to be centered.
+    const pad = range;
+    const minTop = totalMinDepth - pad;
+    const maxTop = totalMaxDepth + pad - range;
+    if (newTop < minTop) {
+      newTop = minTop;
       newBottom = newTop + range;
     }
-    if (newBottom > totalMaxDepth) {
-      newBottom = totalMaxDepth;
-      newTop = newBottom - range;
+    if (newTop > maxTop) {
+      newTop = maxTop;
+      newBottom = newTop + range;
     }
 
     set({ topDepth: newTop, bottomDepth: newBottom });
   },
 
   zoom: (factor, anchorDepth) => {
-    const { topDepth, bottomDepth, pixelsPerMeter, totalMinDepth, totalMaxDepth } = get();
-    const newPPM = Math.max(MIN_PIXELS_PER_METER, Math.min(MAX_PIXELS_PER_METER, pixelsPerMeter * factor));
+    const { topDepth, bottomDepth, pixelsPerMeter } = get();
+    const newPPM = Math.max(
+      MIN_PIXELS_PER_METER,
+      Math.min(MAX_PIXELS_PER_METER, pixelsPerMeter * factor)
+    );
+    // `factor` may be limited by the ppm clamps — recompute the effective ratio.
+    const effectiveRatio = newPPM / pixelsPerMeter;
+    const oldRange = bottomDepth - topDepth;
+    const newRange = oldRange / effectiveRatio;
 
-    // Keep anchor depth at the same pixel position
-    const anchorFraction = (anchorDepth - topDepth) / (bottomDepth - topDepth);
-    const newRange = (bottomDepth - topDepth) * (pixelsPerMeter / newPPM);
-    let newTop = anchorDepth - anchorFraction * newRange;
-    let newBottom = newTop + newRange;
+    // Anchor the cursor depth to the same pixel position after the zoom.
+    const anchorFraction =
+      oldRange > 0 ? (anchorDepth - topDepth) / oldRange : 0.5;
+    const newTop = anchorDepth - anchorFraction * newRange;
+    const newBottom = newTop + newRange;
 
-    // Clamp
-    if (newTop < totalMinDepth) {
-      newTop = totalMinDepth;
-      newBottom = newTop + newRange;
-    }
-    if (newBottom > totalMaxDepth) {
-      newBottom = totalMaxDepth;
-      newTop = Math.max(totalMinDepth, newBottom - newRange);
-    }
-
+    // NO clamping here — clamping range to data bounds while ppm is not
+    // adjusted causes a permanent desync between top/bottom and ppm, which
+    // manifests as "irreversible" zoom. scrollBy handles panning clamps;
+    // zoom just changes scale around the anchor.
     set({ topDepth: newTop, bottomDepth: newBottom, pixelsPerMeter: newPPM });
   },
 

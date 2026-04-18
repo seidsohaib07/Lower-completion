@@ -1,4 +1,4 @@
-import { AppHeader } from './components/layout/AppHeader';
+import { MenuBar } from './components/layout/MenuBar';
 import { MainToolbar } from './components/toolbar/MainToolbar';
 import { MainLayout } from './components/layout/MainLayout';
 
@@ -8,7 +8,7 @@ function App() {
       className="flex flex-col h-full w-full"
       style={{ background: 'var(--color-surface)' }}
     >
-      <AppHeader />
+      <MenuBar />
       <MainToolbar />
       <MainLayout />
     </div>
