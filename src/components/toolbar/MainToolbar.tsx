@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { useUIStore, useViewportStore, useLogDataStore } from '../../stores';
-import { EquipmentPalette } from './EquipmentPalette';
 import { ZoomControls } from './ZoomControls';
 
 export function MainToolbar() {
@@ -53,7 +52,6 @@ export function MainToolbar() {
         >
           Select / Move
         </button>
-        <EquipmentPalette />
       </div>
 
       <div className="flex items-center gap-2">

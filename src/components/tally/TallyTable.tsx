@@ -61,12 +61,20 @@ export function TallyTable() {
         className="flex items-center justify-between px-3 py-1.5 border-b shrink-0"
         style={{ borderColor: 'var(--color-border)' }}
       >
-        <span
-          className="text-[10px] uppercase tracking-wider font-semibold"
-          style={{ color: 'var(--color-text-muted)' }}
-        >
-          Completion Tally
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className="text-[10px] uppercase tracking-wider font-semibold"
+            style={{ color: 'var(--color-text-muted)' }}
+          >
+            Completion Tally
+          </span>
+          <span
+            className="text-[8px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full"
+            style={{ background: 'var(--color-accent)', color: '#000' }}
+          >
+            &#946; Beta
+          </span>
+        </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
             {tally.rows.length} items | Total: {tally.totalLength.toFixed(2)} m
