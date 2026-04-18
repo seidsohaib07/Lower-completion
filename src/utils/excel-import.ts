@@ -33,10 +33,16 @@ export async function parseExcelCPILogs(file: File): Promise<LogDataSet> {
     }
   }
 
-  // Find the depth column
-  const depthCol = rawColumns.find((c) => columnMapping[c] === 'MD');
+  // Find the depth column — try mapped 'MD', then look for DEPTH/DEPT/DBTM directly
+  let depthCol = rawColumns.find((c) => columnMapping[c] === 'MD');
   if (!depthCol) {
-    throw new Error('No depth (MD) column found. Expected column named: MD, Measured_Depth, or Depth');
+    depthCol = rawColumns.find((c) => {
+      const u = c.toUpperCase();
+      return u === 'DEPTH' || u === 'DEPT' || u === 'DBTM' || u === 'DMEA';
+    });
+  }
+  if (!depthCol) {
+    throw new Error('No depth (MD) column found. Expected column named: MD, DEPTH, DEPT, or DBTM');
   }
 
   // Parse depth curve
@@ -140,7 +146,7 @@ export async function parseExcelTally(file: File): Promise<CompletionString> {
 
 function getUnitForCurve(name: string): string {
   const units: Record<string, string> = {
-    GR: 'API',
+    GR: 'gAPI',
     PHIE: 'v/v',
     PERM: 'mD',
     SW: 'frac',
@@ -149,6 +155,30 @@ function getUnitForCurve(name: string): string {
     RHOB: 'g/cc',
     NPHI: 'v/v',
     VCL: 'frac',
+    ROP5: 'm/h',
+    SPPA: 'bar',
+    HKLA: '10 kN',
+    ECD: 'g/cm3',
+    RPMA: 'c/min',
+    TDRA: 'kN.m',
+    MFIA: 'L/min',
+    TQA: 'kN.m',
+    WOBA: '10 kN',
+    BPOS: 'm',
+    INCL: 'deg',
+    AZIM: 'deg',
+    DLS: 'deg/30m',
+    DHAT: 'degC',
+    TFLO: 'L/min',
+    SWOB: '10 kN',
+    PVEL: 'm/h',
+    BLKP: 'm',
+    STICK: 'c/min',
+    SHKRSK: 'Euc',
+    TRPM: 'c/min',
+    RPM: 'c/min',
+    STOR: 'kN.m',
+    DHAP: 'bar',
   };
   return units[name] ?? '';
 }
