@@ -7,14 +7,6 @@ import { PanelResizer } from './PanelResizer';
 import { TallyTable } from '../tally/TallyTable';
 import { Toolbox } from '../toolbox/Toolbox';
 
-/**
- * Horizontal orientation: depth runs left → right.
- * We render the existing vertical canvases inside wrappers that are rotated
- * −90° around the origin. Correct transform is:
- *   translate(0, Hpx) rotate(-90deg)
- * which maps pre-corners (0,0)→(0,H), (H,0)→(0,0), (0,W)→(W,H), (H,W)→(W,0)
- * so that shallow depth appears on the LEFT and deep depth on the RIGHT.
- */
 export function MainLayout() {
   const panelSplit = useUIStore((s) => s.panelSplit);
   const showProperties = useUIStore((s) => s.showProperties);
@@ -37,22 +29,20 @@ export function MainLayout() {
   }, []);
 
   if (isHorizontal) {
-    // Horizontal: depth runs left → right. We split the screen top (logs) / bottom (schematic).
-    const toolboxH = showToolbox ? 64 : 0;
     const propertiesW = showProperties ? 260 : 0;
-    const effectiveW = (size.w > 0 ? size.w : window.innerWidth) - propertiesW;
-    const availH = (size.h > 0 ? size.h : window.innerHeight) - toolboxH;
-    const logH = Math.max(100, availH * panelSplit);
-    const compH = Math.max(100, availH - logH);
+    const containerW = size.w > 0 ? size.w : (window.innerWidth - propertiesW);
+    const containerH = size.h > 0 ? size.h : (window.innerHeight - 120);
+    const logH = Math.max(80, containerH * panelSplit);
+    const compH = Math.max(80, containerH - logH);
 
-    const rotatedBoxStyle = (W: number, H: number): React.CSSProperties => ({
+    const rotatedBoxStyle = (visibleW: number, slotH: number): React.CSSProperties => ({
       position: 'absolute',
-      width: H,
-      height: W,
+      width: slotH,
+      height: visibleW,
       top: 0,
       left: 0,
       transformOrigin: '0 0',
-      transform: `translate(0, ${H}px) rotate(-90deg)`,
+      transform: `translate(0, ${slotH}px) rotate(-90deg)`,
     });
 
     return (
@@ -65,19 +55,21 @@ export function MainLayout() {
             data-export-region
             data-export-area
           >
+            {/* Log panel — top section */}
             <div
               className="shrink-0 overflow-hidden relative border-b"
               style={{ height: logH, width: '100%', borderColor: 'var(--color-border)' }}
             >
-              <div style={rotatedBoxStyle(effectiveW, logH)}>
-                <LogViewer />
+              <div style={rotatedBoxStyle(containerW, logH)}>
+                <LogViewer horizontalTrackHeight={logH} />
               </div>
             </div>
+            {/* Completion panel — bottom section */}
             <div
               className="shrink-0 overflow-hidden relative"
               style={{ height: compH, width: '100%' }}
             >
-              <div style={rotatedBoxStyle(effectiveW, compH)}>
+              <div style={rotatedBoxStyle(containerW, compH)}>
                 <CompletionViewer />
               </div>
             </div>

@@ -11,7 +11,10 @@ interface LASCurveInfo {
 const DEPTH_MNEMONICS = new Set(['DEPTH', 'DEPT', 'DBTM', 'DMEA', 'MD', 'MEASURED_DEPTH']);
 
 export async function parseLASFile(file: File): Promise<LogDataSet> {
-  const text = await file.text();
+  let text = await file.text();
+  // Strip BOM if present
+  if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
+
   const lines = text.split(/\r?\n/);
 
   let wellName = file.name.replace(/\.las$/i, '');
@@ -26,6 +29,8 @@ export async function parseLASFile(file: File): Promise<LogDataSet> {
   const curveData: Map<number, number[]> = new Map();
   let depthColIndex = -1;
   let numericColIndices: number[] = [];
+  const tokensPerCol: number[] = [];
+  let firstDataLine = true;
 
   for (const rawLine of lines) {
     const line = rawLine.trim();
@@ -88,7 +93,7 @@ export async function parseLASFile(file: File): Promise<LogDataSet> {
   }
 
   if (curveInfos.length === 0) throw new Error('No curve definitions found in LAS file.');
-  if (depthValues.length === 0) throw new Error('No data rows found in LAS file.');
+  if (depthValues.length === 0) throw new Error('No data rows found in LAS file. Found ' + curveInfos.length + ' curves but no valid depth values.');
 
   const minDepth = Math.min(...depthValues);
   const maxDepth = Math.max(...depthValues);
@@ -122,12 +127,6 @@ export async function parseLASFile(file: File): Promise<LogDataSet> {
     maxDepth,
   };
 
-  // How many whitespace-separated tokens each column consumes in data rows.
-  // Date columns (unit 'd') look like "22.12.2023 00:00:08" → 2 tokens.
-  // Time-of-day columns (unit 'c') look like "00:00:08" → 1 token.
-  // Everything else → 1 token.
-  const tokensPerCol: number[] = [];
-
   function identifyColumns() {
     for (const info of curveInfos) {
       if (DEPTH_MNEMONICS.has(info.mnemonic)) {
@@ -157,10 +156,9 @@ export async function parseLASFile(file: File): Promise<LogDataSet> {
       })
       .map(info => info.colIndex);
 
-    // Build per-column token-consumption table.
+    // Default: 1 token per column. Auto-detected from first data line.
     for (const info of curveInfos) {
-      // Date columns (unit 'd') produce "DD.MM.YYYY HH:MM:SS" — 2 tokens in data rows.
-      tokensPerCol[info.colIndex] = info.unit.toLowerCase() === 'd' ? 2 : 1;
+      tokensPerCol[info.colIndex] = 1;
     }
 
     for (const idx of numericColIndices) {
@@ -169,7 +167,26 @@ export async function parseLASFile(file: File): Promise<LogDataSet> {
   }
 
   function parseDataLine(line: string) {
-    const tokens = line.split(/\s+/);
+    const tokens = line.split(/\s+/).filter(t => t.length > 0);
+    if (tokens.length === 0) return;
+
+    // Auto-detect token counts from first data line: if total tokens exceeds
+    // number of curves, date columns (unit 'd') must consume 2 tokens each
+    // (e.g. "22.12.2023 00:00:08").
+    if (firstDataLine) {
+      firstDataLine = false;
+      const extra = tokens.length - curveInfos.length;
+      if (extra > 0) {
+        let remaining = extra;
+        for (const info of curveInfos) {
+          if (remaining <= 0) break;
+          if (info.unit.toLowerCase() === 'd') {
+            tokensPerCol[info.colIndex] = 2;
+            remaining--;
+          }
+        }
+      }
+    }
 
     const numericValues: Map<number, number> = new Map();
     let tokenIdx = 0;
@@ -179,7 +196,6 @@ export async function parseLASFile(file: File): Promise<LogDataSet> {
       if (tokenIdx >= tokens.length) break;
 
       if (colIdx === depthColIndex) {
-        // Depth is always a single numeric token.
         const v = Number(tokens[tokenIdx]);
         if (!isNaN(v)) numericValues.set(colIdx, v);
         tokenIdx += consume;

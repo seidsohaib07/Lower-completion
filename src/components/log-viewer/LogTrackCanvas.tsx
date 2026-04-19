@@ -7,9 +7,10 @@ import { getCurveByName } from '../../utils/log-processing';
 
 interface LogTrackCanvasProps {
   trackConfig: TrackConfig;
+  minWidthOverride?: number;
 }
 
-export function LogTrackCanvas({ trackConfig }: LogTrackCanvasProps) {
+export function LogTrackCanvas({ trackConfig, minWidthOverride }: LogTrackCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { canvasRef, width, height, requestRender } = useCanvasRenderer(containerRef);
 
@@ -34,7 +35,15 @@ export function LogTrackCanvas({ trackConfig }: LogTrackCanvasProps) {
   }, [width, height, topDepth, bottomDepth, pixelsPerMeter, trackConfig, logData, theme, formationMarkers, showFormationMarkers, requestRender]);
 
   return (
-    <div ref={containerRef} className="flex-1 h-full canvas-container" style={{ minWidth: trackConfig.width }}>
+    <div
+      ref={containerRef}
+      className="h-full canvas-container"
+      style={{
+        minWidth: minWidthOverride ?? trackConfig.width,
+        maxWidth: minWidthOverride,
+        flex: minWidthOverride ? `0 0 ${minWidthOverride}px` : 1,
+      }}
+    >
       <canvas ref={canvasRef} className="block" />
     </div>
   );
