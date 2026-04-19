@@ -197,7 +197,7 @@ function useMenuBar() {
   /* ── Menus ──────────────────────────────────────────────────────────── */
   const menus: Menu[] = [
     {
-      label: 'File',
+      label: '­­ ­ ­­ ­ ­File­­ ­ ­­ ­ ',
       items: [
         { label: 'Demo Well', onClick: handleLoadDemo },
         { divider: true, label: '' },
@@ -211,7 +211,7 @@ function useMenuBar() {
       ],
     },
     {
-      label: 'Edit',
+      label: '­­ ­ ­­ ­ Edit­­ ­ ­­ ­ ',
       items: [
         { label: `${activeTool === 'select' ? '✓ ' : ''}Select`, onClick: () => setActiveTool('select'), shortcut: 'S' },
         { divider: true, label: '' },
@@ -239,7 +239,7 @@ function useMenuBar() {
       ],
     },
     {
-      label: 'Insert',
+      label: '­­ ­ ­­ ­ Insert­­ ­ ­­ ­ ',
       items: [
         { label: '✨ Suggest Completion', onClick: handleSuggest, disabled: !logData },
         { divider: true, label: '' },
@@ -247,7 +247,7 @@ function useMenuBar() {
       ],
     },
     {
-      label: 'View',
+      label: '­­ ­ ­­ ­ View­­ ­ ­­ ­ ',
       items: [
         { label: `${showToolbox ? '✓ ' : ''}Toolbox`, onClick: toggleToolbox },
         { label: `${showProperties ? '✓ ' : ''}Properties Panel`, onClick: toggleProperties },
@@ -263,7 +263,7 @@ function useMenuBar() {
       ],
     },
     {
-      label: 'Help',
+      label: '­­ ­ ­­ ­ Help­­ ­ ­­ ­ ',
       items: [
         { label: 'Keyboard Shortcuts', onClick: () => alert('Ctrl+Scroll: Zoom\nScroll: Pan\nRight-click: Equipment menu\nDrag from toolbox: Place') },
         { label: 'About Complete It', onClick: () => alert('Complete It — Lower Completion Design Tool\nBuilt for open-hole horizontal well completions.') },
